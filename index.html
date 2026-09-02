@@ -498,6 +498,13 @@
   }
   .key--op { --kf1: var(--op-1); --kf2: var(--op-2); --kedge: var(--op-edge); --klabel: #eef2ff; font-weight: 700; }
   .key--eq { --kf1: var(--eq-1); --kf2: var(--eq-2); --kedge: var(--eq-edge); --klabel: #062338; font-weight: 700; }
+  /* In Sales mode "=" also commits the line, so colour it like Add to Sale */
+  .app[data-mode="sales"] .key--eq {
+    --kf1: color-mix(in srgb, var(--success) 82%, #fff);
+    --kf2: var(--success);
+    --kedge: color-mix(in srgb, var(--success) 55%, #000);
+    --klabel: #ffffff;
+  }
 
   /* ============ Sale list ============ */
   .salelist { padding: 11px 13px; }
@@ -1076,7 +1083,13 @@
       render();
     }
     function equals() {
-      if (pendingOp === null) { commitBuffer(); render(); return; }
+      if (pendingOp === null) {
+        // Nothing left to calculate: in Sales mode "=" doubles as Add to Sale.
+        if (emode() === "sales") { addToSale(); return; }
+        commitBuffer();
+        render();
+        return;
+      }
       var result = clamp8(applyOp(pendingAcc, currentNumber(), pendingOp));
       line[activeField] = result;
       buffer = ""; pendingOp = null; awaitingOperand = false; justEvaluated = true;
@@ -1201,6 +1214,16 @@
       $("#saleH").textContent = editing ? ("Edit Item " + (editIndex + 1)) : "Sale Details";
       $("#addBtn").textContent = editing ? "Update Item" : "Add to Sale";
       $("#cancelEditBtn").hidden = !editing;
+
+      var eqBtn = document.querySelector(".key--eq");
+      if (eqBtn) {
+        var eqSale = !calc;
+        var eqLabel = eqSale
+          ? (editing ? "Equals, or update the item" : "Equals, or add the line to the sale")
+          : "Equals";
+        eqBtn.setAttribute("aria-label", eqLabel);
+        eqBtn.title = eqLabel;
+      }
 
       if (!calc) {
         var eff = effectiveLine();
