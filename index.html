@@ -559,6 +559,29 @@
     max-height: 146px;
     overflow-y: auto;
   }
+  .salelist__foot {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 14px;
+    margin-top: 7px;
+    padding-top: 7px;
+    border-top: 1px dashed var(--line-strong);
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .salelist__foot[hidden] { display: none; }
+  .salelist__foot b {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 0;
+    color: var(--ink);
+  }
+  .salelist__foot span:last-child b { color: var(--success); }
   .li {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto 24px;
@@ -976,6 +999,11 @@
       <span class="salelist__meta"><span data-role="count">0</span>&nbsp;items</span>
     </div>
     <div class="salelist__body" data-role="items"></div>
+    <div class="salelist__foot" data-role="listFoot" hidden>
+      <span>Subtotal <b data-role="lf-sub">0.00</b></span>
+      <span>Tax <b data-role="lf-tax">0.00</b></span>
+      <span>Total <b data-role="lf-total">0.00</b></span>
+    </div>
   </section>
 
   <section class="summary" aria-label="Sale summary">
@@ -1402,6 +1430,14 @@
         role("s-tax").textContent = money8(sums.tax);
         role("s-grand").textContent = money8(sums.grand);
 
+        var lf = role("listFoot");
+        if (lf) {
+          lf.hidden = sale.length === 0;
+          role("lf-sub").textContent = money8(sums.sub);
+          role("lf-tax").textContent = money8(sums.tax);
+          role("lf-total").textContent = money8(sums.grand);
+        }
+
         var gw = role("grandWords");
         if (gw) {
           gw.innerHTML = sale.length
@@ -1452,7 +1488,7 @@
         if (it.tax) pieces.push("+" + trim(it.tax) + "% tax");
         var sub = pieces.length ? "<small>" + pieces.join(" " + MIDDOT + " ") + "</small>" : "";
         var cls = "li" + (i === editIndex ? " li--editing" : "");
-        var sn = numbered ? '<span class="li__sn">' + (i + 1) + ".</span> " : "";
+        var sn = numbered ? '<span class="li__sn">' + (i + 1) + ")</span> " : "";
         return '' +
           '<div class="' + cls + '" data-i="' + i + '" tabindex="0" aria-label="Edit item ' + (i + 1) + '" title="Tap to edit">' +
             '<span class="li__desc">' + sn + trim(it.qty) + ' ' + TIMES + ' ' + money(it.price) + sub + '</span>' +
@@ -1487,7 +1523,7 @@
         var tags = [];
         if (it.discount) tags.push(MINUS + trim(it.discount) + "%");
         if (it.tax) tags.push("+" + trim(it.tax) + "% tax");
-        L.push((numbered ? (i + 1) + ". " : "") + trim(it.qty) + " " + TIMES + " " + money(it.price) +
+        L.push((numbered ? (i + 1) + ") " : "") + trim(it.qty) + " " + TIMES + " " + money(it.price) +
           (tags.length ? " (" + tags.join(", ") + ")" : "") + " → " + money(it.total));
       });
       L.push(rule);
@@ -1506,7 +1542,7 @@
         var tags = [];
         if (it.discount) tags.push("-" + trim(it.discount) + "%");
         if (it.tax) tags.push("+" + trim(it.tax) + "%");
-        var d = (numbered ? (i + 1) + ".&nbsp; " : "") + trim(it.qty) + " &times; " + money(it.price) +
+        var d = (numbered ? (i + 1) + ")&nbsp; " : "") + trim(it.qty) + " &times; " + money(it.price) +
           (tags.length ? " <small>(" + tags.join(" &middot; ") + ")</small>" : "");
         return "<tr><td>" + d + "</td><td class='num'>" + money(it.taxAmt) +
           "</td><td class='num'>" + money(it.total) + "</td></tr>";
