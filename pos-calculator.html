@@ -216,6 +216,34 @@
   .btn-ghost:active, .btn-ac:active { transform: translateY(1px); }
   .topbar .btn-ghost:focus-visible, .topbar .btn-ac:focus-visible { outline-color: #fff; }
 
+  /* ---- Shop name (saved per device, printed on receipts) ---- */
+  .shopbar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 3px 10px;
+    border-radius: 9px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+  }
+  .shopbar__ico { color: var(--ink-dim); flex: none; }
+  .shopbar__input {
+    flex: 1;
+    min-width: 0;
+    height: 24px;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .shopbar__input::placeholder { color: var(--ink-dim); font-weight: 500; }
+  .shopbar__input:focus { outline: none; }
+  .shopbar:focus-within { border-color: var(--c-qty); }
+
   /* ============ Two-panel layout ============ */
   .carousel {
     display: grid;
@@ -696,6 +724,7 @@
   .app[data-mode="calc"] .salelist,
   .app[data-mode="calc"] .summary,
   .app[data-mode="calc"] .grand-words,
+  .app[data-mode="calc"] .shopbar,
   .app[data-mode="calc"] .share,
   .app[data-mode="calc"] .pager,
   .app[data-mode="calc"] #undoBtn,
@@ -838,6 +867,15 @@
     </div>
   </header>
 
+  <div class="shopbar">
+    <svg class="shopbar__ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 9l1.5-5h15L21 9M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9zM3 9h18"></path>
+    </svg>
+    <input id="shopName" class="shopbar__input" type="text" maxlength="42"
+      placeholder="Enter shop name" autocomplete="organization"
+      aria-label="Shop name (saved on this device, shown on receipts)">
+  </div>
+
   <main class="carousel" id="carousel">
     <!-- SALE DETAILS -->
     <section class="card panel-sale" aria-labelledby="saleH">
@@ -969,7 +1007,16 @@
 
     var MINUS = "−", TIMES = "×", MIDDOT = "·";
     var MAX_DIGITS = 8, MAX_VALUE = 99999999;
-    var TAX_KEY = "bconntech.pos.tax", MODE_KEY = "bconntech.pos.mode";
+    var TAX_KEY = "bconntech.pos.tax", MODE_KEY = "bconntech.pos.mode",
+        SHOP_KEY = "bconntech.pos.shop";
+
+    function readShop() {
+      try { return (localStorage.getItem(SHOP_KEY) || "").trim(); } catch (e) { return ""; }
+    }
+    function saveShop(v) {
+      try { localStorage.setItem(SHOP_KEY, (v || "").slice(0, 42)); } catch (e) {}
+    }
+    function shopTitle() { return readShop() || "bconnTech"; }
 
     function readTax() {
       try {
@@ -1423,23 +1470,33 @@
         a.sub += it.subtotal; a.tax += it.taxAmt; a.grand += it.total; return a;
       }, { sub: 0, tax: 0, grand: 0 });
     }
+    function fmtWhen() {
+      try {
+        return new Date().toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+      } catch (e) { return new Date().toLocaleString(); }
+    }
     function receiptText() {
       var s = saleSums();
-      var L = ["bconnTech - Sale", new Date().toLocaleString(), ""];
+      var rule = "————————————————————————";
       var numbered = sale.length > 1;
+      var L = [];
+      L.push(shopTitle().toUpperCase());
+      L.push("Sale Receipt " + MIDDOT + " " + fmtWhen());
+      L.push(rule);
       sale.forEach(function (it, i) {
         var tags = [];
-        if (it.discount) tags.push("-" + trim(it.discount) + "%");
+        if (it.discount) tags.push(MINUS + trim(it.discount) + "%");
         if (it.tax) tags.push("+" + trim(it.tax) + "% tax");
-        L.push((numbered ? (i + 1) + ". " : "") + trim(it.qty) + " x " + money(it.price) +
-          (tags.length ? "  (" + tags.join(", ") + ")" : ""));
-        L.push("        = " + money(it.total));
+        L.push((numbered ? (i + 1) + ". " : "") + trim(it.qty) + " " + TIMES + " " + money(it.price) +
+          (tags.length ? " (" + tags.join(", ") + ")" : "") + " → " + money(it.total));
       });
-      L.push("");
-      L.push("Subtotal      " + money(s.sub));
-      L.push("Total Tax     " + money(s.tax));
-      L.push("GRAND TOTAL   " + money(s.grand));
-      L.push(amountInWords(s.grand));
+      L.push(rule);
+      L.push("Subtotal: " + money(s.sub));
+      L.push("Total Tax: " + money(s.tax));
+      L.push("GRAND TOTAL: " + money(s.grand));
+      L.push("In words: " + amountInWords(s.grand));
+      L.push(rule);
+      L.push("Sent from bconnTech Calculator");
       return L.join("\n");
     }
     function fillReceiptHTML() {
@@ -1454,9 +1511,14 @@
         return "<tr><td>" + d + "</td><td class='num'>" + money(it.taxAmt) +
           "</td><td class='num'>" + money(it.total) + "</td></tr>";
       }).join("");
+      var esc = function (t) {
+        return String(t).replace(/[&<>"]/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+        });
+      };
       document.getElementById("receipt").innerHTML =
-        "<h1>bconnTech &mdash; Sale</h1>" +
-        "<p class='r-meta'>" + new Date().toLocaleString() + "</p>" +
+        "<h1>" + esc(shopTitle()) + "</h1>" +
+        "<p class='r-meta'>Sale Receipt &middot; " + esc(fmtWhen()) + "</p>" +
         "<table><thead><tr><th>Item</th><th class='num'>Tax</th><th class='num'>Line total</th></tr></thead>" +
         "<tbody>" + rows + "</tbody><tfoot>" +
           "<tr class='r-sub'><td>Subtotal</td><td></td><td class='num'>" + money(s.sub) + "</td></tr>" +
@@ -1508,7 +1570,7 @@
         shareToggleEl.setAttribute("aria-expanded", opening ? "true" : "false");
         if (opening) {
           var txt = receiptText();
-          var subj = "bconnTech sale " + MIDDOT + " grand total " + money(saleSums().grand);
+          var subj = shopTitle() + " " + MIDDOT + " sale receipt " + MIDDOT + " total " + money(saleSums().grand);
           document.getElementById("shOptEmail").href =
             "mailto:?subject=" + encodeURIComponent(subj) + "&body=" + encodeURIComponent(txt);
           document.getElementById("shOptWa").href =
@@ -1539,6 +1601,17 @@
     }
 
     /* ---------- Wiring ---------- */
+
+    var shopInput = document.getElementById("shopName");
+    if (shopInput) {
+      shopInput.value = readShop();
+      var shopTimer = null;
+      shopInput.addEventListener("input", function () {
+        clearTimeout(shopTimer);
+        shopTimer = setTimeout(function () { saveShop(shopInput.value); }, 300);
+      });
+      shopInput.addEventListener("blur", function () { saveShop(shopInput.value); });
+    }
 
     document.querySelectorAll("[data-field]").forEach(function (b) {
       b.addEventListener("click", function () { setActive(b.dataset.field); });
@@ -1585,6 +1658,7 @@
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       var k = e.key;
       var ae = document.activeElement;
+      if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
       if ((k === "Enter" || k === " ") && ae && ae.tagName === "BUTTON") return;
       if (/^[0-9]$/.test(k)) inputDigit(k);
       else if (k === ".") inputDot();
