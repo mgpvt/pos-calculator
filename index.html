@@ -546,6 +546,7 @@
   .li:hover { background: color-mix(in srgb, var(--c-qty) 7%, transparent); }
   .li:focus-visible { outline: 2px solid var(--c-qty); outline-offset: -2px; }
   .li__desc { font-weight: 600; color: var(--ink); }
+  .li__sn { color: var(--ink-dim); font-weight: 700; }
   .li__desc small {
     display: block;
     font-weight: 500;
@@ -633,11 +634,69 @@
     color: var(--success);
   }
 
+  /* ---- Share / export ---- */
+  .share { margin-top: 8px; }
+  .share[hidden] { display: none; }
+  .share__toggle {
+    display: block;
+    margin: 0 auto;
+    height: 32px;
+    padding: 0 18px;
+    border-radius: 9px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--c-qty) 86%, #fff), var(--c-qty));
+    box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--c-qty) 80%, transparent);
+    transition: transform 0.06s ease, filter 0.15s ease;
+  }
+  .share__toggle:hover { filter: brightness(1.05); }
+  .share__toggle:active { transform: translateY(1px); }
+
+  .share__menu {
+    margin: 8px auto 0;
+    max-width: 340px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+    gap: 7px;
+  }
+  .share__menu[hidden] { display: none; }
+  .share__opt {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 34px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line-strong);
+    transition: border-color 0.12s ease, background 0.12s ease;
+  }
+  .share__opt:hover { border-color: var(--c-qty); background: color-mix(in srgb, var(--c-qty) 7%, var(--card)); }
+  .share__opt svg { width: 14px; height: 14px; flex: none; }
+  .share__opt[hidden] { display: none; }
+  .share__note {
+    margin: 6px 0 0;
+    text-align: center;
+    font-size: 0.66rem;
+    color: var(--ink-dim);
+    min-height: 0.9em;
+  }
+  .share__note:empty { display: none; }
+
   /* ============ Calculator-only mode ============ */
   .app[data-mode="calc"] .panel-sale,
   .app[data-mode="calc"] .salelist,
   .app[data-mode="calc"] .summary,
   .app[data-mode="calc"] .grand-words,
+  .app[data-mode="calc"] .share,
   .app[data-mode="calc"] .pager,
   .app[data-mode="calc"] #undoBtn,
   .app[data-mode="calc"] .fnrow,
@@ -721,6 +780,39 @@
 
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; scroll-behavior: auto !important; }
+  }
+
+  /* ---- Print / save-as-PDF: show only the receipt ---- */
+  .receipt { display: none; }
+  @media print {
+    @page { margin: 12mm; }
+    html, body { background: #fff !important; }
+    .app { display: none !important; }
+    .receipt {
+      display: block;
+      margin: 0;
+      padding: 0;
+      color: #000;
+      background: #fff;
+      font-family: var(--sans);
+      font-size: 11pt;
+      line-height: 1.5;
+    }
+    .receipt h1 {
+      margin: 0 0 2mm;
+      font-size: 15pt;
+      letter-spacing: 0.06em;
+    }
+    .receipt .r-meta { margin: 0 0 5mm; font-size: 9pt; color: #444; }
+    .receipt table { width: 100%; border-collapse: collapse; }
+    .receipt th, .receipt td { padding: 2mm 1mm; text-align: left; vertical-align: top; }
+    .receipt th { border-bottom: 1px solid #000; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.08em; }
+    .receipt td.num, .receipt th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .receipt tbody td { border-bottom: 1px solid #ddd; }
+    .receipt .r-sub td { padding-top: 3mm; }
+    .receipt .r-grand td { border-top: 2px solid #000; font-weight: 700; font-size: 12pt; padding-top: 2mm; }
+    .receipt .r-words { margin: 3mm 0 0; font-size: 9pt; font-style: italic; }
+    .receipt .r-foot { margin: 8mm 0 0; font-size: 8pt; color: #666; }
   }
 </style>
 
@@ -855,7 +947,21 @@
   </section>
 
   <p class="grand-words" data-role="grandWords" aria-live="polite"></p>
+
+  <div class="share" data-role="share" hidden>
+    <button class="share__toggle" id="shareToggle" aria-expanded="false">Share sale &#9662;</button>
+    <div class="share__menu" id="shareMenu" hidden>
+      <a class="share__opt" id="shOptEmail" href="#" target="_blank" rel="noopener">Email</a>
+      <a class="share__opt" id="shOptWa" href="#" target="_blank" rel="noopener">WhatsApp</a>
+      <button class="share__opt" id="shOptCopy" type="button">Copy text</button>
+      <button class="share__opt" id="shOptShare" type="button" hidden>Share&hellip;</button>
+      <button class="share__opt" id="shOptPrint" type="button">Print / PDF</button>
+    </div>
+    <p class="share__note" id="shareNote" role="status" aria-live="polite"></p>
+  </div>
 </div>
+
+<div class="receipt" id="receipt" aria-hidden="true"></div>
 
 <script>
   (function () {
@@ -1256,6 +1362,13 @@
             : "";
         }
 
+        var shareEl = role("share");
+        if (shareEl) {
+          var showShare = sale.length > 0;
+          if (!showShare && !shareEl.hidden) collapseShareMenu();
+          shareEl.hidden = !showShare;
+        }
+
         saveTax(line.tax);
 
         setLcd(role("d-entry"), fieldText(activeField));
@@ -1285,20 +1398,144 @@
           ' build a sale, then press <strong>Add to Sale</strong>.</div>';
         return;
       }
+      var numbered = sale.length > 1;
       body.innerHTML = sale.map(function (it, i) {
         var pieces = [];
         if (it.discount) pieces.push(MINUS + trim(it.discount) + "%");
         if (it.tax) pieces.push("+" + trim(it.tax) + "% tax");
         var sub = pieces.length ? "<small>" + pieces.join(" " + MIDDOT + " ") + "</small>" : "";
         var cls = "li" + (i === editIndex ? " li--editing" : "");
+        var sn = numbered ? '<span class="li__sn">' + (i + 1) + ".</span> " : "";
         return '' +
           '<div class="' + cls + '" data-i="' + i + '" tabindex="0" aria-label="Edit item ' + (i + 1) + '" title="Tap to edit">' +
-            '<span class="li__desc">' + trim(it.qty) + ' ' + TIMES + ' ' + money(it.price) + sub + '</span>' +
+            '<span class="li__desc">' + sn + trim(it.qty) + ' ' + TIMES + ' ' + money(it.price) + sub + '</span>' +
             '<span class="li__tax">' + money(it.taxAmt) + '</span>' +
             '<span class="li__total">' + money(it.total) + '</span>' +
             '<button class="li__rm" data-i="' + i + '" aria-label="Remove item ' + (i + 1) + '">&times;</button>' +
           '</div>';
       }).join("");
+    }
+
+    /* ---------- Share the sale ---------- */
+
+    function saleSums() {
+      return sale.reduce(function (a, it) {
+        a.sub += it.subtotal; a.tax += it.taxAmt; a.grand += it.total; return a;
+      }, { sub: 0, tax: 0, grand: 0 });
+    }
+    function receiptText() {
+      var s = saleSums();
+      var L = ["bconnTech - Sale", new Date().toLocaleString(), ""];
+      var numbered = sale.length > 1;
+      sale.forEach(function (it, i) {
+        var tags = [];
+        if (it.discount) tags.push("-" + trim(it.discount) + "%");
+        if (it.tax) tags.push("+" + trim(it.tax) + "% tax");
+        L.push((numbered ? (i + 1) + ". " : "") + trim(it.qty) + " x " + money(it.price) +
+          (tags.length ? "  (" + tags.join(", ") + ")" : ""));
+        L.push("        = " + money(it.total));
+      });
+      L.push("");
+      L.push("Subtotal      " + money(s.sub));
+      L.push("Total Tax     " + money(s.tax));
+      L.push("GRAND TOTAL   " + money(s.grand));
+      L.push(amountInWords(s.grand));
+      return L.join("\n");
+    }
+    function fillReceiptHTML() {
+      var s = saleSums();
+      var numbered = sale.length > 1;
+      var rows = sale.map(function (it, i) {
+        var tags = [];
+        if (it.discount) tags.push("-" + trim(it.discount) + "%");
+        if (it.tax) tags.push("+" + trim(it.tax) + "%");
+        var d = (numbered ? (i + 1) + ".&nbsp; " : "") + trim(it.qty) + " &times; " + money(it.price) +
+          (tags.length ? " <small>(" + tags.join(" &middot; ") + ")</small>" : "");
+        return "<tr><td>" + d + "</td><td class='num'>" + money(it.taxAmt) +
+          "</td><td class='num'>" + money(it.total) + "</td></tr>";
+      }).join("");
+      document.getElementById("receipt").innerHTML =
+        "<h1>bconnTech &mdash; Sale</h1>" +
+        "<p class='r-meta'>" + new Date().toLocaleString() + "</p>" +
+        "<table><thead><tr><th>Item</th><th class='num'>Tax</th><th class='num'>Line total</th></tr></thead>" +
+        "<tbody>" + rows + "</tbody><tfoot>" +
+          "<tr class='r-sub'><td>Subtotal</td><td></td><td class='num'>" + money(s.sub) + "</td></tr>" +
+          "<tr><td>Total Tax</td><td></td><td class='num'>" + money(s.tax) + "</td></tr>" +
+          "<tr class='r-grand'><td>Grand Total</td><td></td><td class='num'>" + money(s.grand) + "</td></tr>" +
+        "</tfoot></table>" +
+        "<p class='r-words'>" + amountInWords(s.grand) + "</p>" +
+        "<p class='r-foot'>Generated by bconnTech Calculator</p>";
+    }
+
+    var shareMenuEl = document.getElementById("shareMenu");
+    var shareToggleEl = document.getElementById("shareToggle");
+    var shareNoteEl = document.getElementById("shareNote");
+    var noteTimer = null;
+
+    function shareNote(msg) {
+      shareNoteEl.textContent = msg || "";
+      clearTimeout(noteTimer);
+      if (msg) noteTimer = setTimeout(function () { shareNoteEl.textContent = ""; }, 3200);
+    }
+    function collapseShareMenu() {
+      if (!shareMenuEl) return;
+      shareMenuEl.hidden = true;
+      shareToggleEl.setAttribute("aria-expanded", "false");
+      shareNote("");
+    }
+    function fallbackCopy(txt) {
+      try {
+        var ta = document.createElement("textarea");
+        ta.value = txt;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        shareNote(ok ? "Copied to clipboard." : "Couldn't copy — select the text manually.");
+      } catch (e) { shareNote("Couldn't copy on this device."); }
+    }
+
+    if (shareToggleEl) {
+      var optShare = document.getElementById("shOptShare");
+      if (optShare && navigator.share) optShare.hidden = false;
+
+      shareToggleEl.addEventListener("click", function () {
+        var opening = shareMenuEl.hidden;
+        shareMenuEl.hidden = !opening;
+        shareToggleEl.setAttribute("aria-expanded", opening ? "true" : "false");
+        if (opening) {
+          var txt = receiptText();
+          var subj = "bconnTech sale " + MIDDOT + " grand total " + money(saleSums().grand);
+          document.getElementById("shOptEmail").href =
+            "mailto:?subject=" + encodeURIComponent(subj) + "&body=" + encodeURIComponent(txt);
+          document.getElementById("shOptWa").href =
+            "https://wa.me/?text=" + encodeURIComponent(txt);
+        } else {
+          shareNote("");
+        }
+      });
+      document.getElementById("shOptCopy").addEventListener("click", function () {
+        var txt = receiptText();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(
+            function () { shareNote("Copied " + MIDDOT + " paste into Slack, notes, anywhere."); },
+            function () { fallbackCopy(txt); }
+          );
+        } else {
+          fallbackCopy(txt);
+        }
+      });
+      if (optShare) optShare.addEventListener("click", function () {
+        if (!navigator.share) return;
+        navigator.share({ title: "bconnTech Sale", text: receiptText() }).catch(function () {});
+      });
+      document.getElementById("shOptPrint").addEventListener("click", function () {
+        fillReceiptHTML();
+        window.print();
+      });
     }
 
     /* ---------- Wiring ---------- */
