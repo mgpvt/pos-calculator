@@ -552,25 +552,30 @@
     color: var(--ink-dim);
   }
   .salelist__meta { font-size: 0.64rem; font-weight: 600; color: var(--ink-dim); }
-  .salelist__body {
+  .salelist__scroll {
     background: var(--inset);
     border: 1px solid var(--line);
     border-radius: 9px;
-    max-height: 146px;
+    max-height: 168px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
   }
   .salelist__cols,
   .li {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 4.4em 4em 4.6em 22px;
+    grid-template-columns: minmax(0, 1fr) 4.9em 4.4em 5.1em 22px;
     align-items: center;
-    gap: 8px;
-    padding: 6px 11px;
+    gap: 6px;
+    padding: 6px 10px;
     font-size: 0.76rem;
   }
   .salelist__cols {
-    padding-top: 0;
-    padding-bottom: 4px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--inset);
+    border-bottom: 1px solid var(--line);
+    padding: 6px 10px 5px;
     font-size: 0.58rem;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -861,8 +866,8 @@
     .receipt th { border-bottom: 1px solid #000; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.08em; }
     .receipt td.num, .receipt th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .receipt tbody td { border-bottom: 1px solid #ddd; }
-    .receipt .r-sub td { padding-top: 3mm; }
-    .receipt .r-grand td { border-top: 2px solid #000; font-weight: 700; font-size: 12pt; padding-top: 2mm; }
+    .receipt .r-tot td { border-top: 1.5px solid #000; font-weight: 600; padding-top: 2.5mm; }
+    .receipt .r-grand td { font-weight: 700; font-size: 12pt; padding-top: 1mm; }
     .receipt .r-words { margin: 3mm 0 0; font-size: 9pt; font-style: italic; }
     .receipt .r-foot { margin: 8mm 0 0; font-size: 8pt; color: #666; }
   }
@@ -998,10 +1003,12 @@
       <h2 id="listH">Current Sale</h2>
       <span class="salelist__meta"><span data-role="count">0</span>&nbsp;items</span>
     </div>
-    <div class="salelist__cols" data-role="listCols" aria-hidden="true" hidden>
-      <span>Item</span><span>Subtotal</span><span>Tax</span><span>Total</span><span></span>
+    <div class="salelist__scroll">
+      <div class="salelist__cols" data-role="listCols" aria-hidden="true" hidden>
+        <span>Item</span><span>Subtotal</span><span>Tax</span><span>Total</span><span></span>
+      </div>
+      <div class="salelist__body" data-role="items"></div>
     </div>
-    <div class="salelist__body" data-role="items"></div>
   </section>
 
   <section class="summary" aria-label="Sale summary">
@@ -1555,8 +1562,10 @@
         "<p class='r-meta'>Sale Receipt &middot; " + esc(fmtWhen()) + "</p>" +
         "<table><thead><tr><th>Item</th><th class='num'>Subtotal</th><th class='num'>Tax</th><th class='num'>Total</th></tr></thead>" +
         "<tbody>" + rows + "</tbody><tfoot>" +
-          "<tr class='r-sub'><td>Subtotal</td><td></td><td></td><td class='num'>" + money(s.sub) + "</td></tr>" +
-          "<tr><td>Total Tax</td><td></td><td></td><td class='num'>" + money(s.tax) + "</td></tr>" +
+          "<tr class='r-tot'><td>Totals</td>" +
+            "<td class='num'>" + money(s.sub) + "</td>" +
+            "<td class='num'>" + money(s.tax) + "</td>" +
+            "<td class='num'>" + money(s.grand) + "</td></tr>" +
           "<tr class='r-grand'><td>Grand Total</td><td></td><td></td><td class='num'>" + money(s.grand) + "</td></tr>" +
         "</tfoot></table>" +
         "<p class='r-words'>" + amountInWords(s.grand) + "</p>" +
