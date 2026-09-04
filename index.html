@@ -243,6 +243,29 @@
   .shopbar__input::placeholder { color: var(--ink-dim); font-weight: 500; }
   .shopbar__input:focus { outline: none; }
   .shopbar:focus-within { border-color: var(--c-qty); }
+  .sndbtn {
+    flex: none;
+    width: 26px;
+    height: 22px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--ink-dim);
+    transition: color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+  }
+  .sndbtn svg { width: 15px; height: 15px; }
+  .sndbtn:hover { color: var(--ink); border-color: var(--ink-dim); }
+  .sndbtn:not(.is-off) { color: var(--c-qty); border-color: color-mix(in srgb, var(--c-qty) 40%, var(--line-strong)); }
+  .sndbtn .snd-x { display: none; }
+  .sndbtn.is-off .snd-wave { display: none; }
+  .sndbtn.is-off .snd-x { display: block; }
+  /* in mobile Calculator mode keep just the sound toggle in the bar */
+  .app[data-mode="calc"] .shopbar__ico,
+  .app[data-mode="calc"] .shopbar__input { display: none; }
+  .app[data-mode="calc"] .shopbar { justify-content: flex-end; }
 
   /* ============ Two-panel layout ============ */
   .carousel {
@@ -747,7 +770,6 @@
   .app[data-mode="calc"] .salelist,
   .app[data-mode="calc"] .summary,
   .app[data-mode="calc"] .grand-words,
-  .app[data-mode="calc"] .shopbar,
   .app[data-mode="calc"] .share,
   .app[data-mode="calc"] .pager,
   .app[data-mode="calc"] #undoBtn,
@@ -902,6 +924,13 @@
     <input id="shopName" class="shopbar__input" type="text" maxlength="42"
       placeholder="Enter shop name" autocomplete="organization"
       aria-label="Shop name (saved on this device, shown on receipts)">
+    <button class="sndbtn" id="soundToggle" type="button" aria-pressed="true" title="Button click sounds">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 9v6h4l5 4V5L8 9H4z"></path>
+        <g class="snd-wave"><path d="M16 8.6a5 5 0 0 1 0 6.8"></path><path d="M18.7 6a8.6 8.6 0 0 1 0 12"></path></g>
+        <path class="snd-x" d="M22 9l-5 6M17 9l5 6"></path>
+      </svg>
+    </button>
   </div>
 
   <main class="carousel" id="carousel">
@@ -1041,7 +1070,78 @@
     var MINUS = "−", TIMES = "×", MIDDOT = "·";
     var MAX_DIGITS = 8, MAX_VALUE = 99999999;
     var TAX_KEY = "bconntech.pos.tax", MODE_KEY = "bconntech.pos.mode",
-        SHOP_KEY = "bconntech.pos.shop";
+        SHOP_KEY = "bconntech.pos.shop", SOUND_KEY = "bconntech.pos.sound";
+
+    /* ---------- Sound (synthesised, Web Audio) ---------- */
+    var soundOn = true;
+    try { soundOn = localStorage.getItem(SOUND_KEY) !== "off"; } catch (e) {}
+    var actx = null, noiseBuf = null;
+
+    function initAudio() {
+      if (actx) return;
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      try { actx = new Ctx(); } catch (e) { actx = null; return; }
+      var n = Math.floor(actx.sampleRate * 0.05);
+      noiseBuf = actx.createBuffer(1, n, actx.sampleRate);
+      var d = noiseBuf.getChannelData(0);
+      for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
+    }
+    function resumeAudio() {
+      if (actx && actx.state === "suspended") { try { actx.resume(); } catch (e) {} }
+    }
+    // kind: "key" | "op" | "ctrl"
+    function clickSound(kind) {
+      if (!soundOn) return;
+      initAudio();
+      if (!actx) return;
+      resumeAudio();
+      var t = actx.currentTime;
+      var src = actx.createBufferSource();
+      src.buffer = noiseBuf;
+      var band = actx.createBiquadFilter();
+      band.type = "bandpass";
+      band.frequency.value = kind === "op" ? 900 : kind === "ctrl" ? 1300 : 1850;
+      band.Q.value = 0.9;
+      var g = actx.createGain();
+      var peak = kind === "op" ? 0.26 : 0.2;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+      src.connect(band); band.connect(g); g.connect(actx.destination);
+      src.start(t); src.stop(t + 0.06);
+    }
+    // rising two-note chime for "=" and "Add to Sale"
+    function confirmSound() {
+      if (!soundOn) return;
+      initAudio();
+      if (!actx) return;
+      resumeAudio();
+      var t = actx.currentTime;
+      [[784, 0], [1175, 0.085]].forEach(function (nt) {
+        var o = actx.createOscillator();
+        var g = actx.createGain();
+        o.type = "sine";
+        o.frequency.value = nt[0];
+        var s = t + nt[1];
+        g.gain.setValueAtTime(0.0001, s);
+        g.gain.exponentialRampToValueAtTime(0.22, s + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, s + 0.19);
+        o.connect(g); g.connect(actx.destination);
+        o.start(s); o.stop(s + 0.22);
+      });
+    }
+    function setSound(on, silent) {
+      soundOn = !!on;
+      try { localStorage.setItem(SOUND_KEY, soundOn ? "on" : "off"); } catch (e) {}
+      var b = document.getElementById("soundToggle");
+      if (b) {
+        b.classList.toggle("is-off", !soundOn);
+        b.setAttribute("aria-pressed", soundOn ? "true" : "false");
+        b.title = soundOn ? "Button sounds on" : "Button sounds off";
+      }
+      if (soundOn && !silent) clickSound("ctrl");
+    }
 
     function readShop() {
       try { return (localStorage.getItem(SHOP_KEY) || "").trim(); } catch (e) { return ""; }
@@ -1281,6 +1381,7 @@
       buffer = ""; pendingOp = null; awaitingOperand = false; justEvaluated = true;
       if (activeField === "tax") saveTax(line.tax);
       render();
+      confirmSound();
     }
 
     /* ---------- Sale actions ---------- */
@@ -1312,6 +1413,7 @@
       editIndex = null;
       resetLine();
       render();
+      confirmSound();
     }
     // Load a saved line back into the fields for editing.
     function startEdit(i) {
@@ -1657,20 +1759,21 @@
     }
 
     document.querySelectorAll("[data-field]").forEach(function (b) {
-      b.addEventListener("click", function () { setActive(b.dataset.field); });
+      b.addEventListener("click", function () { clickSound("ctrl"); setActive(b.dataset.field); });
     });
     document.querySelector(".keypad").addEventListener("click", function (e) {
       var b = e.target.closest("button");
       if (!b) return;
-      if (b.dataset.digit) inputDigit(b.dataset.digit);
-      else if (b.dataset.op) inputOperator(b.dataset.op);
-      else if (b.dataset.act === "dot") inputDot();
-      else if (b.dataset.act === "equals") equals();
+      if (b.dataset.digit) { clickSound("key"); inputDigit(b.dataset.digit); }
+      else if (b.dataset.op) { clickSound("op"); inputOperator(b.dataset.op); }
+      else if (b.dataset.act === "dot") { clickSound("key"); inputDot(); }
+      else if (b.dataset.act === "equals") { clickSound("op"); equals(); }
     });
     document.querySelector(".ctrlrow").addEventListener("click", function (e) {
       var b = e.target.closest("button");
       if (!b) return;
       var a = b.dataset.act;
+      clickSound("ctrl");
       if (a === "ce") clearEntry();
       else if (a === "back") backspace();
       else if (a === "neg") negate();
@@ -1678,21 +1781,24 @@
     });
     role("items").addEventListener("click", function (e) {
       var rm = e.target.closest(".li__rm");
-      if (rm) { removeItem(+rm.dataset.i); return; }
+      if (rm) { clickSound("ctrl"); removeItem(+rm.dataset.i); return; }
       var row = e.target.closest(".li");
-      if (row && row.dataset.i != null) startEdit(+row.dataset.i);
+      if (row && row.dataset.i != null) { clickSound("ctrl"); startEdit(+row.dataset.i); }
     });
     role("items").addEventListener("keydown", function (e) {
       if (e.key !== "Enter" && e.key !== " ") return;
       var row = e.target.closest(".li");
       if (row && row.dataset.i != null) { e.preventDefault(); startEdit(+row.dataset.i); }
     });
-    $("#addBtn").addEventListener("click", addToSale);
-    $("#cancelEditBtn").addEventListener("click", cancelEdit);
-    $("#undoBtn").addEventListener("click", undo);
-    $("#acBtn").addEventListener("click", allClear);
+    $("#addBtn").addEventListener("click", function () { clickSound("op"); addToSale(); });
+    $("#cancelEditBtn").addEventListener("click", function () { clickSound("ctrl"); cancelEdit(); });
+    $("#undoBtn").addEventListener("click", function () { clickSound("ctrl"); undo(); });
+    $("#acBtn").addEventListener("click", function () { clickSound("ctrl"); allClear(); });
+    $("#soundToggle").addEventListener("click", function () { setSound(!soundOn); });
+    setSound(soundOn, true);
+    appEl.addEventListener("pointerdown", function () { initAudio(); resumeAudio(); }, { passive: true });
     document.querySelectorAll(".modeswitch__btn").forEach(function (b) {
-      b.addEventListener("click", function () { setMode(b.dataset.mode); });
+      b.addEventListener("click", function () { clickSound("ctrl"); setMode(b.dataset.mode); });
     });
     if (narrowMq.addEventListener) narrowMq.addEventListener("change", applyMode);
     else if (narrowMq.addListener) narrowMq.addListener(applyMode);
@@ -1703,13 +1809,13 @@
       var ae = document.activeElement;
       if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
       if ((k === "Enter" || k === " ") && ae && ae.tagName === "BUTTON") return;
-      if (/^[0-9]$/.test(k)) inputDigit(k);
-      else if (k === ".") inputDot();
-      else if (k === "+" || k === "-" || k === "*" || k === "/") inputOperator(k);
-      else if (k === "Enter" || k === "=") { e.preventDefault(); equals(); }
-      else if (k === "Backspace") { e.preventDefault(); backspace(); }
-      else if (k === "Escape") clearEntry();
-      else if (k === "%") percent();
+      if (/^[0-9]$/.test(k)) { clickSound("key"); inputDigit(k); }
+      else if (k === ".") { clickSound("key"); inputDot(); }
+      else if (k === "+" || k === "-" || k === "*" || k === "/") { clickSound("op"); inputOperator(k); }
+      else if (k === "Enter" || k === "=") { e.preventDefault(); clickSound("op"); equals(); }
+      else if (k === "Backspace") { e.preventDefault(); clickSound("ctrl"); backspace(); }
+      else if (k === "Escape") { clickSound("ctrl"); clearEntry(); }
+      else if (k === "%") { clickSound("ctrl"); percent(); }
       else return;
     });
 
