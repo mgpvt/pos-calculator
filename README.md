@@ -7,8 +7,8 @@ A single-file, dependency-free **POS-style shop calculator**.
 ## What it does
 
 - **Calc / Sales modes** — a plain calculator, or a full sale register. On the web both
-  panels always show; on mobile the Calculator is the landing screen and the two screens
-  swipe side by side.
+  panels always show side by side; on mobile there's a single stacked screen (no swiping) —
+  the Calc/Sales toggle there switches between just the calculator and the full register.
 - **Sale ledger** — Qty × Price, minus Discount %, plus Tax %, giving Subtotal, Discount
   Amount, Tax Amount and Total, all in one aligned column.
 - **Current Sale** — add lines to the sale; tap any line to load it back and edit it.

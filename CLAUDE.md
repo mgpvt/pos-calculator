@@ -186,6 +186,14 @@ implemented, verified, committed, and deployed. There is no half-finished work i
   concluding there's a real overflow bug (this happened once and cost a lot of back-and-forth).
 - Browsers without `color-mix()` support will show broken/transparent tints in several places
   (buttons, tags, tinted panels) — no fallback colors are defined.
+- **Two different Claude Artifacts share the exact title "bconnTech Calculator"** — don't confuse
+  them (`Artifact` → `action: "list"` shows both):
+  - `https://claude.ai/code/artifact/b8ac173a-8651-44e9-a270-ee020f901148` (favicon 🛒) is
+    **`pos-calculator.html`** — the active app, most recently updated.
+  - `https://claude.ai/code/artifact/01d7bd16-8fd4-4bb0-894d-e0acf1acca41` (favicon 🔢) is the
+    **older `calculator.html`** pocket calculator, published earlier and not touched since.
+  Republishing to update one **must** pass that artifact's own `url`, or it creates a third,
+  disconnected artifact instead of updating either.
 
 ## 10. Important decisions and why
 
@@ -223,16 +231,22 @@ implemented, verified, committed, and deployed. There is no half-finished work i
 
 ## 11. Current task / status — exactly where we stopped
 
-Clean stopping point. Last user request ("animation can be a bit more slower and bigger... yellow
-brighter") is fully implemented, verified (screenshots showed the bigger/brighter pop clearly),
-committed, and deployed. `git status` is clean; `main` is pushed; GitHub Pages last build
-succeeded and served HTTP 200.
+Clean stopping point. The last *feature* request ("animation can be a bit more slower and
+bigger... yellow brighter") was fully implemented, verified, committed, and deployed. After that,
+this `CLAUDE.md` was written and committed as its own follow-up (documentation only — no app code
+changed). `git status` is clean; `main` is pushed; GitHub Pages last build succeeded and served
+HTTP 200.
 
-- Last commit: `a660f5b` — "Slower, bigger, brighter fly-to-list animation"
+- Last commit as of this writing: `d30e660` — "Add CLAUDE.md project notes for session
+  continuity" (previous one, the last actual app change, was `a660f5b` — "Slower, bigger,
+  brighter fly-to-list animation"). **This hash will already be out of date by your next commit —
+  run `git log -1` rather than trusting the number above.**
 - Repo: https://github.com/mgpvt/pos-calculator (public)
 - Live site: https://mgpvt.github.io/pos-calculator/
-- Claude Artifact (private preview, same content as of the last publish in-session):
-  `https://claude.ai/code/artifact/b8ac173a-8651-44e9-a270-ee020f901148`
+- Claude Artifact for `pos-calculator.html` (private preview, same content as the last publish
+  in-session): `https://claude.ai/code/artifact/b8ac173a-8651-44e9-a270-ee020f901148` — **there is
+  a second, similarly-named artifact for the other file; see the disambiguation note in §9 before
+  republishing either.**
 
 No open questions are pending from the user.
 
