@@ -116,8 +116,11 @@ not something to write down here.)
 - **`=` is dual-purpose in Sales mode**: if there's a pending calculation it evaluates it first;
   if not, it commits the current line to the sale (same as pressing **Add to Sale**) — and the
   key turns green to signal this. On press, the result **flies from the display into its Current
-  Sale row**: a bright yellow (`#ffe600`), glowing token that pops ~1.4× size then glides
-  (~1.3s total) down into place, with a brief highlight flash on landing. Skips the animation
+  Sale row** (`flyResultToList()`): a pure-yellow (`#ffff00`) token in a plain dark navy pill —
+  **no yellow border/halo around the pill itself**, only the digits glow (via `text-shadow`) —
+  that pops big then glides (~1.3s total) down into place, with a brief highlight flash on
+  landing. Scales up more on phones (`narrowMq.matches`: 2.3× base font / 1.7× pop / settles at
+  0.7×) than on desktop (1.6× / 1.4× / 0.55×) so it reads at arm's length. Skips the animation
   under `prefers-reduced-motion`.
 - **Current Sale list**: each line shows `n) qty × price (−disc% · +tax%)` plus **Subtotal / Tax /
   Total** in their own aligned columns under a sticky column header (stays aligned even when the
@@ -149,8 +152,10 @@ words readout, synthesised key-click sound with a toggle. Not being extended cur
 
 ## 8. Features currently being worked on
 
-**None.** The last request (make the "=" fly-to-list animation slower/bigger/brighter) was
-implemented, verified, committed, and deployed. There is no half-finished work in either file.
+**None.** The fly-to-list animation went through three follow-up refinement requests in a row
+(slower/bigger/brighter overall → bigger + purer yellow specifically on mobile → drop the yellow
+border/halo around the pill) and the last one has been implemented, verified, committed, and
+deployed. There is no half-finished work in either file.
 
 ## 9. Known bugs / limitations / things to watch
 
@@ -224,23 +229,26 @@ implemented, verified, committed, and deployed. There is no half-finished work i
   one.
 - **Serial numbers only shown once there's more than one item** — a single-item sale reads better
   without a redundant "1)".
-- **Fly-to-list animation deliberately slow/large/bright** (bumped up once already, from an
-  initial ~0.7s subtle version) because the first version was too quick/small to register as
-  meaningful feedback — the point is to *feel* the item land in the sale, especially on a phone
-  in a shop.
+- **Fly-to-list animation deliberately slow/large/bright, tuned twice already** — from an
+  initial ~0.7s subtle version (too quick/small to register), to a slower/bigger global pass, to
+  a mobile-specific size bump (phones scale the token up further than desktop, since it's read at
+  arm's length) — because the point is to *feel* the item land in the sale, especially on a phone
+  in a shop. The pill's box-shadow was later stripped down to a plain dark drop shadow (no yellow
+  ring/halo around the pill) after the user found the yellow border distracting — only the digits
+  themselves glow yellow now, via `text-shadow`, not the container.
 
 ## 11. Current task / status — exactly where we stopped
 
-Clean stopping point. The last *feature* request ("animation can be a bit more slower and
-bigger... yellow brighter") was fully implemented, verified, committed, and deployed. After that,
-this `CLAUDE.md` was written and committed as its own follow-up (documentation only — no app code
-changed). `git status` is clean; `main` is pushed; GitHub Pages last build succeeded and served
+Clean stopping point. The fly-to-list animation had three refinement passes in a row (see §8);
+the most recent removed the yellow border/glow-ring from around the pill so only the digits glow
+— that change and this `CLAUDE.md` update are committed together in the commit you're reading
+this from. `git status` is clean; `main` is pushed; GitHub Pages last build succeeded and served
 HTTP 200.
 
-- Last commit as of this writing: `d30e660` — "Add CLAUDE.md project notes for session
-  continuity" (previous one, the last actual app change, was `a660f5b` — "Slower, bigger,
-  brighter fly-to-list animation"). **This hash will already be out of date by your next commit —
-  run `git log -1` rather than trusting the number above.**
+- The commit containing this doc update is titled "Remove the yellow border/halo from the
+  fly-to-list token" (or similar — check its message). The one immediately before it was
+  `18d96b1` — "Bigger, brighter yellow fly-to-list token on mobile". **Don't trust either hash for
+  long — run `git log -1` for the real current HEAD.**
 - Repo: https://github.com/mgpvt/pos-calculator (public)
 - Live site: https://mgpvt.github.io/pos-calculator/
 - Claude Artifact for `pos-calculator.html` (private preview, same content as the last publish
