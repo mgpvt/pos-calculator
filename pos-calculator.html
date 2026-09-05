@@ -837,17 +837,19 @@
     pointer-events: none;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    padding: 3px 10px;
-    border-radius: 8px;
+    justify-content: center;
+    padding: 7px 18px;
+    border-radius: 11px;
     background: linear-gradient(180deg, var(--bezel-1), var(--bezel-2));
-    box-shadow: 0 8px 18px -6px rgba(0, 0, 0, 0.55);
+    box-shadow:
+      0 0 0 2px rgba(255, 234, 0, 0.4),
+      0 0 30px 7px rgba(255, 234, 0, 0.55),
+      0 16px 28px -8px rgba(0, 0, 0, 0.6);
     font-family: var(--mono);
     font-weight: 700;
-    color: #ffd43b;
-    text-shadow: 0 0 8px rgba(255, 212, 59, 0.6);
+    color: #ffe600;
+    text-shadow: 0 0 7px rgba(255, 255, 255, 0.9), 0 0 20px rgba(255, 230, 0, 0.95);
     white-space: nowrap;
-    transition: transform 0.55s cubic-bezier(0.22, 0.9, 0.35, 1), opacity 0.4s ease 0.22s;
     will-change: transform, opacity;
   }
   .li--landed { animation: liLanded 0.7s ease; }
@@ -1419,7 +1421,7 @@
       confirmSound();
       flyResultToList(srcRect, srcText, targetIndex);
     }
-    // Animate the LCD total flying (in yellow) down into its Current Sale row.
+    // Animate the LCD total flying (bright yellow, pop-then-glide) into its Current Sale row.
     function flyResultToList(srcRect, text, index) {
       if (!srcRect || !text) return;
       var row = document.querySelector('.li[data-i="' + index + '"]');
@@ -1429,25 +1431,24 @@
       var destRect = destEl.getBoundingClientRect();
       if (destRect.width === 0 && destRect.height === 0) return;
 
+      var srcCx = srcRect.left + srcRect.width / 2;
+      var srcCy = srcRect.top + srcRect.height / 2;
+      var dx = (destRect.left + destRect.width / 2) - srcCx;
+      var dy = (destRect.top + destRect.height / 2) - srcCy;
+      var baseSize = parseFloat(window.getComputedStyle(role("d-total") || document.body).fontSize) || 16;
+
       var clone = document.createElement("div");
       clone.className = "fly-total";
       clone.textContent = text;
-      clone.style.left = srcRect.left + "px";
-      clone.style.top = srcRect.top + "px";
-      clone.style.width = srcRect.width + "px";
-      clone.style.height = srcRect.height + "px";
-      clone.style.fontSize = window.getComputedStyle(role("d-total") || document.body).fontSize;
+      clone.style.left = srcCx + "px";
+      clone.style.top = srcCy + "px";
+      clone.style.fontSize = (baseSize * 1.6) + "px";
+      clone.style.transition = "none";
+      clone.style.transform = "translate(-50%, -50%) scale(0.6)";
+      clone.style.opacity = "1";
       document.body.appendChild(clone);
 
-      var dx = (destRect.left + destRect.width / 2) - (srcRect.left + srcRect.width / 2);
-      var dy = (destRect.top + destRect.height / 2) - (srcRect.top + srcRect.height / 2);
-
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          clone.style.transform = "translate(" + dx + "px, " + dy + "px) scale(0.4)";
-          clone.style.opacity = "0";
-        });
-      });
+      var POP_MS = 300, FLY_MS = 1050, FADE_DELAY = 550, FADE_MS = 550;
 
       var done = false;
       function finish() {
@@ -1456,11 +1457,31 @@
         if (clone.parentNode) clone.parentNode.removeChild(clone);
         if (row) {
           row.classList.add("li--landed");
-          setTimeout(function () { row.classList.remove("li--landed"); }, 720);
+          setTimeout(function () { row.classList.remove("li--landed"); }, 750);
         }
       }
-      clone.addEventListener("transitionend", finish);
-      setTimeout(finish, 700);
+
+      // Pop: the total swells big, right where it was, so it's felt before it moves.
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          clone.style.transition = "transform " + POP_MS + "ms cubic-bezier(0.34, 1.56, 0.64, 1)";
+          clone.style.transform = "translate(-50%, -50%) scale(1.4)";
+        });
+      });
+      // Glide: a slow, easy arc down into the list, fading in only near the end.
+      setTimeout(function () {
+        clone.style.transition =
+          "transform " + FLY_MS + "ms cubic-bezier(0.24, 0.7, 0.3, 1), " +
+          "opacity " + FADE_MS + "ms ease " + FADE_DELAY + "ms";
+        clone.style.transform =
+          "translate(calc(-50% + " + dx + "px), calc(-50% + " + dy + "px)) scale(0.55)";
+        clone.style.opacity = "0";
+      }, POP_MS);
+
+      clone.addEventListener("transitionend", function (e) {
+        if (e.propertyName === "opacity") finish();
+      });
+      setTimeout(finish, POP_MS + Math.max(FLY_MS, FADE_DELAY + FADE_MS) + 150);
     }
     // Load a saved line back into the fields for editing.
     function startEdit(i) {
