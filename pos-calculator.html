@@ -275,8 +275,6 @@
     align-items: stretch;   /* sale details + calculator share one height */
   }
 
-  .pager { display: none; }
-
   /* ---- Sale details: a slim label / value ledger ---- */
   .panel-sale {
     padding: 11px 12px;
@@ -771,7 +769,6 @@
   .app[data-mode="calc"] .summary,
   .app[data-mode="calc"] .grand-words,
   .app[data-mode="calc"] .share,
-  .app[data-mode="calc"] .pager,
   .app[data-mode="calc"] #undoBtn,
   .app[data-mode="calc"] .fnrow,
   .app[data-mode="calc"] .lcd__echo { display: none; }
@@ -783,63 +780,39 @@
     box-shadow: inset 3px 0 0 var(--c-qty);
   }
 
+  .editnote {
+    margin-right: auto;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    color: #fff;
+    background: var(--c-qty);
+    border: 0;
+  }
+  .editnote[hidden] { display: none; }
+  .editnote:hover { filter: brightness(1.08); }
+
   /* ============ Desktop: always show both screens ============ */
   @media (min-width: 761px) {
     .modeswitch { display: none; }
   }
 
-  /* ============ Mobile: swipe screens, calculator first ============ */
+  /* ============ Mobile: calculator only, no swipe ============ */
   @media (max-width: 760px) {
     .app { max-width: 480px; }
 
-    .carousel {
-      display: flex;
-      grid-template-columns: none;
-      align-items: flex-start;
-      gap: 12px;
-      min-width: 0;
-      max-width: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
-      scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      padding: 6px calc(50% - 150px) 8px;
-    }
-    .carousel::-webkit-scrollbar { display: none; }
-    .carousel > .card {
-      flex: 0 0 300px;
-      min-width: 0;
-      scroll-snap-align: center;
-    }
-    .panel-sale { width: auto; }
-    .panel-calc { order: -1; }
-
-    .app[data-mode="calc"] .carousel { justify-content: center; padding-bottom: 6px; }
-
+    .panel-sale { display: none; }
+    .carousel { display: block; }
+    .panel-calc { width: 100%; }
     .panel-calc {
       box-shadow:
         inset 0 2px 3px rgba(150, 180, 255, 0.35),
         inset 0 -4px 8px rgba(0, 0, 0, 0.45),
         0 8px 18px -12px rgba(8, 14, 40, 0.5);
     }
-
-    .pager {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 7px;
-      margin-top: -3px;
-    }
-    .pager__dot {
-      width: 7px; height: 7px;
-      padding: 0;
-      border-radius: 999px;
-      background: var(--line-strong);
-      transition: background 0.18s ease, width 0.18s ease;
-    }
-    .pager__dot.is-on { background: var(--navy); width: 22px; }
-    .pager__dot:focus-visible { outline: 2px solid var(--c-qty); outline-offset: 3px; }
 
     .key { min-height: 40px; font-size: 0.98rem; }
     .fn { min-height: 40px; }
@@ -857,8 +830,34 @@
     .li__sub, .li__tax, .li__total { font-size: 0.68rem; }
   }
 
+  /* ---- "=" flies the result into the Current Sale list ---- */
+  .fly-total {
+    position: fixed;
+    z-index: 999;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 3px 10px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, var(--bezel-1), var(--bezel-2));
+    box-shadow: 0 8px 18px -6px rgba(0, 0, 0, 0.55);
+    font-family: var(--mono);
+    font-weight: 700;
+    color: #ffd43b;
+    text-shadow: 0 0 8px rgba(255, 212, 59, 0.6);
+    white-space: nowrap;
+    transition: transform 0.55s cubic-bezier(0.22, 0.9, 0.35, 1), opacity 0.4s ease 0.22s;
+    will-change: transform, opacity;
+  }
+  .li--landed { animation: liLanded 0.7s ease; }
+  @keyframes liLanded {
+    0% { background: color-mix(in srgb, #ffd43b 40%, var(--card)); }
+    100% { background: transparent; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; scroll-behavior: auto !important; }
+    * { transition: none !important; scroll-behavior: auto !important; animation: none !important; }
   }
 
   /* ---- Print / save-as-PDF: show only the receipt ---- */
@@ -1022,14 +1021,10 @@
     </section>
   </main>
 
-  <nav class="pager" id="pager" aria-label="Switch screen">
-    <button class="pager__dot" data-i="0" aria-label="Show calculator"></button>
-    <button class="pager__dot" data-i="1" aria-label="Show sale details"></button>
-  </nav>
-
   <section class="card salelist" aria-labelledby="listH">
     <div class="salelist__head">
       <h2 id="listH">Current Sale</h2>
+      <button class="editnote" id="editNote" type="button" hidden></button>
       <span class="salelist__meta"><span data-role="count">0</span>&nbsp;items</span>
     </div>
     <div class="salelist__scroll">
@@ -1403,17 +1398,69 @@
       commitBuffer();
       var L = buildLine(line);
       if (L.subtotal <= 0) { flashHint("Enter a quantity and unit price first."); return; }
+
+      var srcEl = role("d-total");
+      var srcRect = srcEl ? srcEl.getBoundingClientRect() : null;
+      var srcText = srcEl ? srcEl.textContent : money8(L.total);
+
+      var targetIndex;
       if (editIndex != null && sale[editIndex]) {
+        targetIndex = editIndex;
         sale[editIndex] = L;
         flashHint("Item " + (editIndex + 1) + " updated.");
       } else {
         sale.push(L);
+        targetIndex = sale.length - 1;
         flashHint("Item added " + MIDDOT + " subtotal " + money(L.subtotal) + ".");
       }
       editIndex = null;
       resetLine();
       render();
       confirmSound();
+      flyResultToList(srcRect, srcText, targetIndex);
+    }
+    // Animate the LCD total flying (in yellow) down into its Current Sale row.
+    function flyResultToList(srcRect, text, index) {
+      if (!srcRect || !text) return;
+      var row = document.querySelector('.li[data-i="' + index + '"]');
+      if (row && row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
+      var destEl = row || role("items");
+      if (!destEl) return;
+      var destRect = destEl.getBoundingClientRect();
+      if (destRect.width === 0 && destRect.height === 0) return;
+
+      var clone = document.createElement("div");
+      clone.className = "fly-total";
+      clone.textContent = text;
+      clone.style.left = srcRect.left + "px";
+      clone.style.top = srcRect.top + "px";
+      clone.style.width = srcRect.width + "px";
+      clone.style.height = srcRect.height + "px";
+      clone.style.fontSize = window.getComputedStyle(role("d-total") || document.body).fontSize;
+      document.body.appendChild(clone);
+
+      var dx = (destRect.left + destRect.width / 2) - (srcRect.left + srcRect.width / 2);
+      var dy = (destRect.top + destRect.height / 2) - (srcRect.top + srcRect.height / 2);
+
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          clone.style.transform = "translate(" + dx + "px, " + dy + "px) scale(0.4)";
+          clone.style.opacity = "0";
+        });
+      });
+
+      var done = false;
+      function finish() {
+        if (done) return;
+        done = true;
+        if (clone.parentNode) clone.parentNode.removeChild(clone);
+        if (row) {
+          row.classList.add("li--landed");
+          setTimeout(function () { row.classList.remove("li--landed"); }, 720);
+        }
+      }
+      clone.addEventListener("transitionend", finish);
+      setTimeout(finish, 700);
     }
     // Load a saved line back into the fields for editing.
     function startEdit(i) {
@@ -1424,10 +1471,9 @@
       line.discount = it.discount; line.tax = it.tax;
       activeField = "qty";
       buffer = ""; pendingOp = null; awaitingOperand = false; justEvaluated = false;
-      scrollCarouselTo(document.querySelector(".panel-sale"));
       render();
       var el = document.querySelector('.row--in[data-field="qty"]');
-      if (el) el.focus();
+      if (el && el.offsetParent) el.focus();
     }
     function cancelEdit() {
       editIndex = null;
@@ -1474,7 +1520,6 @@
         b.classList.toggle("is-on", on);
         b.setAttribute("aria-pressed", on ? "true" : "false");
       });
-      syncPager();
       render();
     }
 
@@ -1502,6 +1547,12 @@
       $("#saleH").textContent = editing ? ("Edit Item " + (editIndex + 1)) : "Sale Details";
       $("#addBtn").textContent = editing ? "Update Item" : "Add to Sale";
       $("#cancelEditBtn").hidden = !editing;
+
+      var noteBtn = $("#editNote");
+      if (noteBtn) {
+        noteBtn.hidden = !editing;
+        if (editing) noteBtn.textContent = "Editing #" + (editIndex + 1) + " " + MIDDOT + " cancel";
+      }
 
       var eqBtn = document.querySelector(".key--eq");
       if (eqBtn) {
@@ -1792,6 +1843,7 @@
     });
     $("#addBtn").addEventListener("click", function () { clickSound("op"); addToSale(); });
     $("#cancelEditBtn").addEventListener("click", function () { clickSound("ctrl"); cancelEdit(); });
+    $("#editNote").addEventListener("click", function () { clickSound("ctrl"); cancelEdit(); });
     $("#undoBtn").addEventListener("click", function () { clickSound("ctrl"); undo(); });
     $("#acBtn").addEventListener("click", function () { clickSound("ctrl"); allClear(); });
     $("#soundToggle").addEventListener("click", function () { setSound(!soundOn); });
@@ -1819,48 +1871,8 @@
       else return;
     });
 
-    /* ---------- Mobile pager ---------- */
-
-    var track = document.getElementById("carousel");
-    var pagerEl = document.getElementById("pager");
-    var dots = [].slice.call(pagerEl.querySelectorAll(".pager__dot"));
-    var pagerRaf = 0;
-
-    function orderedPanels() {
-      return [].slice.call(track.children).sort(function (a, b) {
-        return a.offsetLeft - b.offsetLeft;
-      });
-    }
-    function syncPager() {
-      var panels = orderedPanels();
-      var mid = track.scrollLeft + track.clientWidth / 2;
-      var idx = 0, best = Infinity;
-      panels.forEach(function (p, i) {
-        var d = Math.abs((p.offsetLeft + p.offsetWidth / 2) - mid);
-        if (d < best) { best = d; idx = i; }
-      });
-      dots.forEach(function (dt, i) { dt.classList.toggle("is-on", i === idx); });
-    }
-    track.addEventListener("scroll", function () {
-      if (pagerRaf) return;
-      pagerRaf = requestAnimationFrame(function () { pagerRaf = 0; syncPager(); });
-    }, { passive: true });
-    function scrollCarouselTo(panel) {
-      if (!panel || !narrowMq.matches) return;
-      track.scrollTo({
-        left: panel.offsetLeft + panel.offsetWidth / 2 - track.clientWidth / 2,
-        behavior: "smooth"
-      });
-    }
-    dots.forEach(function (dt, i) {
-      dt.addEventListener("click", function () {
-        scrollCarouselTo(orderedPanels()[i]);
-      });
-    });
-
     /* ---------- Go ---------- */
 
     applyMode();
-    syncPager();
   })();
 </script>
