@@ -817,6 +817,8 @@
     .key { min-height: 40px; font-size: 0.98rem; }
     .fn { min-height: 40px; }
     .ctrl { min-height: 35px; }
+
+    .fly-total { padding: 9px 20px; border-radius: 13px; }
   }
 
   @media (max-width: 430px) {
@@ -842,13 +844,13 @@
     border-radius: 11px;
     background: linear-gradient(180deg, var(--bezel-1), var(--bezel-2));
     box-shadow:
-      0 0 0 2px rgba(255, 234, 0, 0.4),
-      0 0 30px 7px rgba(255, 234, 0, 0.55),
-      0 16px 28px -8px rgba(0, 0, 0, 0.6);
+      0 0 0 2px rgba(255, 255, 0, 0.55),
+      0 0 34px 9px rgba(255, 255, 0, 0.6),
+      0 16px 28px -8px rgba(0, 0, 0, 0.65);
     font-family: var(--mono);
     font-weight: 700;
-    color: #ffe600;
-    text-shadow: 0 0 7px rgba(255, 255, 255, 0.9), 0 0 20px rgba(255, 230, 0, 0.95);
+    color: #ffff00;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.95), 0 0 22px rgba(255, 255, 0, 1);
     white-space: nowrap;
     will-change: transform, opacity;
   }
@@ -1437,12 +1439,18 @@
       var dy = (destRect.top + destRect.height / 2) - srcCy;
       var baseSize = parseFloat(window.getComputedStyle(role("d-total") || document.body).fontSize) || 16;
 
+      // On a phone the token needs to read from arm's length: scale it up further there.
+      var onPhone = narrowMq.matches;
+      var sizeMul = onPhone ? 2.3 : 1.6;
+      var popScale = onPhone ? 1.7 : 1.4;
+      var landScale = onPhone ? 0.7 : 0.55;
+
       var clone = document.createElement("div");
       clone.className = "fly-total";
       clone.textContent = text;
       clone.style.left = srcCx + "px";
       clone.style.top = srcCy + "px";
-      clone.style.fontSize = (baseSize * 1.6) + "px";
+      clone.style.fontSize = (baseSize * sizeMul) + "px";
       clone.style.transition = "none";
       clone.style.transform = "translate(-50%, -50%) scale(0.6)";
       clone.style.opacity = "1";
@@ -1465,7 +1473,7 @@
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
           clone.style.transition = "transform " + POP_MS + "ms cubic-bezier(0.34, 1.56, 0.64, 1)";
-          clone.style.transform = "translate(-50%, -50%) scale(1.4)";
+          clone.style.transform = "translate(-50%, -50%) scale(" + popScale + ")";
         });
       });
       // Glide: a slow, easy arc down into the list, fading in only near the end.
@@ -1474,7 +1482,7 @@
           "transform " + FLY_MS + "ms cubic-bezier(0.24, 0.7, 0.3, 1), " +
           "opacity " + FADE_MS + "ms ease " + FADE_DELAY + "ms";
         clone.style.transform =
-          "translate(calc(-50% + " + dx + "px), calc(-50% + " + dy + "px)) scale(0.55)";
+          "translate(calc(-50% + " + dx + "px), calc(-50% + " + dy + "px)) scale(" + landScale + ")";
         clone.style.opacity = "0";
       }, POP_MS);
 
