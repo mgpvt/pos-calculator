@@ -1273,14 +1273,6 @@
       var sym = curSymbol();
       return (sym.length > 1 ? sym + " " : sym) + str;
     }
-    // jsPDF's built-in fonts only reliably render WinAnsi glyphs ($ € £ ¥) — ₹/₨ would come out
-    // as missing-glyph boxes, so the PDF falls back to the plain currency code for those instead.
-    function pdfWithSymbol(str) {
-      if (str === "ERROR") return str;
-      var sym = curSymbol();
-      if (["$", "€", "£", "¥"].indexOf(sym) === -1) sym = currency;
-      return (sym.length > 1 ? sym + " " : sym) + str;
-    }
     // Qty/Discount/Tax stay at plain 2dp regardless of currency; only fields that
     // hold an actual money amount (Price, and the plain-Calculator result) follow
     // the selected currency's own decimal places.
@@ -1979,16 +1971,19 @@
       doc.text("Sale Receipt " + MIDDOT + " " + fmtWhen(), margin, 25);
       doc.setTextColor(0);
 
+      // Currency only appears on the Grand Total line and in the money columns' own headings —
+      // item rows and the Totals row stay plain numbers, so the eye isn't re-reading "INR" on
+      // every line.
       var body = sale.map(function (it, i) {
         var qtyDisp = trim(it.qty) + (it.unit ? " " + it.unit : "");
         return [
           String(i + 1),
           it.name || "NA",
           qtyDisp,
-          pdfWithSymbol(money(it.subtotal)) + " (" + qtyDisp + " x " + pdfWithSymbol(money(it.price)) + ")",
+          money(it.subtotal) + " (" + qtyDisp + " x " + money(it.price) + ")",
           it.discount ? trim(it.discount) + "%" : "-",
           it.tax ? trim(it.tax) + "%" : "-",
-          pdfWithSymbol(money(it.total))
+          money(it.total)
         ];
       });
 
@@ -1998,7 +1993,7 @@
         theme: "plain",
         styles: { fontSize: 9, cellPadding: 2, lineColor: [220, 220, 220], lineWidth: 0.1 },
         headStyles: { fontStyle: "bold", textColor: [20, 30, 80], lineWidth: { bottom: 0.3 }, lineColor: [0, 0, 0] },
-        head: [["Sl.no", "Item name", "Qty", "Subtotal", "Discount", "Tax", "Total"]],
+        head: [["Sl.no", "Item name", "Qty", "Subtotal (" + currency + ")", "Discount", "Tax", "Total (" + currency + ")"]],
         body: body,
         columnStyles: {
           0: { halign: "center" },
@@ -2009,8 +2004,8 @@
           6: { halign: "right" }
         },
         foot: [
-          [{ content: "Totals", colSpan: 3 }, pdfWithSymbol(money(s.sub)), "", pdfWithSymbol(money(s.tax)), pdfWithSymbol(money(s.grand))],
-          [{ content: "Grand Total", colSpan: 6 }, pdfWithSymbol(money(s.grand))]
+          [{ content: "Totals", colSpan: 3 }, money(s.sub), "", money(s.tax), money(s.grand)],
+          [{ content: "Grand Total", colSpan: 6 }, currency + " " + money(s.grand)]
         ],
         footStyles: { textColor: [0, 0, 0], lineWidth: { top: 0.3 }, lineColor: [0, 0, 0] },
         didParseCell: function (data) {
