@@ -76,8 +76,8 @@ directly by `pos-calculator.html`'s JS (see `TAX_KEY`/`MODE_KEY`/`SHOP_KEY`/`SOU
 | `bconntech.pos.mode` | `"calc"` \| `"sales"` | User's mode preference. Only visibly matters on mobile (≤760px) — see §10. Defaults to `"calc"`. |
 | `bconntech.pos.shop` | string, ≤42 chars | Shop name, editable any time in the bar under the header. Printed on the PDF receipt heading and prefixed to shared text/email subject. Defaults to empty → displays as "bconnTech". |
 | `bconntech.pos.sound` | `"on"` \| `"off"` | UI click/confirm sound toggle. Defaults on. |
-| `bconntech.pos.items.recent` | JSON array, ≤10 entries `{name, qty, price, discount, tax}` | Last 10 distinct item names committed to a sale (most-recent first, by name, case-insensitive). Feeds the `#itemSuggestions` datalist and exact-match autofill. |
-| `bconntech.pos.items.common` | JSON array, ≤5 entries `{name, qty, price, discount, tax, count}` | Top 5 item names by usage count (independent ranking from `recent` — an old favorite stays listed even after 10 newer items have been added). Also feeds the datalist. |
+| `bconntech.pos.items.recent` | JSON array, ≤10 entries `{name, unit, qty, price, discount, tax}` | Last 10 distinct item names committed to a sale (most-recent first, by name, case-insensitive). Feeds the `#itemSuggestions` datalist and exact-match autofill. |
+| `bconntech.pos.items.common` | JSON array, ≤5 entries `{name, unit, qty, price, discount, tax, count}` | Top 5 item names by usage count (independent ranking from `recent` — an old favorite stays listed even after 10 newer items have been added). Also feeds the datalist. |
 
 `calculator.html` (the older pocket calculator) has its own, separate keys:
 `bconntech.taxrate` (persisted tax rate) and `bconntech.sound` (click-sound toggle).
@@ -117,16 +117,20 @@ repo, not something to write down here.)
   input rows, each tappable to make it the active keypad target; computed Subtotal / Discount
   Amount / Tax Amount / Total rows below, all aligned in one label/value column. Equal-height with
   the calculator panel.
-- **Item name field**: a full-width text input just below the Qty/Price/Discount/Tax buttons —
-  present in *both* the Sale Details panel and the Calculator panel (so it's there on mobile too,
-  where Sale Details is hidden), the two kept in sync live. Backed by a shared `<datalist
-  id="itemSuggestions">` fed from two per-device `localStorage` lists (see §4): the last 10 distinct
-  names used, and the top 5 by usage count. Typing (or picking a suggestion) that exactly matches a
-  saved name (case-insensitive) autofills qty/price/discount/tax from that item's last-used values.
-  The name flows through everywhere a line item shows up: bold above the qty×price line in the
-  Current Sale list, its own line in the plain-text/WhatsApp/Email receipt (unnamed items keep the
-  original compact single-line format), and its own **Item name** column in the printed/PDF
-  receipt table (see below).
+- **Item name + Unit fields**: one row, just below the Qty/Price/Discount/Tax buttons — present in
+  *both* the Sale Details panel and the Calculator panel (so it's there on mobile too, where Sale
+  Details is hidden), all four inputs (2 name + 2 unit) kept in sync live. **Item name** is backed
+  by a shared `<datalist id="itemSuggestions">` fed from two per-device `localStorage` lists (see
+  §4): the last 10 distinct names used, and the top 5 by usage count. Typing (or picking a
+  suggestion) that exactly matches a saved name (case-insensitive) autofills unit/qty/price/
+  discount/tax from that item's last-used values. **Unit** (e.g. `kg`, `pcs`, `box`) is a narrow
+  companion field next to it with a static `<datalist id="unitSuggestions">` of common units,
+  appended to Qty everywhere it's displayed (`5 kg`) — on-screen fields, the Current Sale list,
+  both receipt formats, and the PDF's Qty column — and saved per item alongside price/discount/tax.
+  The item name itself flows through everywhere a line item shows up: bold above the qty×price
+  line in the Current Sale list, its own line in the plain-text/WhatsApp/Email receipt (unnamed
+  items keep the original compact single-line format), and its own **Item name** column in the
+  printed/PDF receipt table (see below).
 - **Calculator**: twin LCD (Entry/Input on the left, Total/Result on the right, both auto-shrink
   font size in three tiers so an 8-digit number never overflows or truncates), a Qty/Price/
   Discount/Tax quick-jump row, CE/⌫/±/% controls, and a 4×4 keypad (`7 8 9 ÷ …`). Values are capped
@@ -152,9 +156,10 @@ repo, not something to write down here.)
 - **Share Sale panel**: Email / WhatsApp / Copy / Share… / Print-PDF, all built from one formatted
   plain-text receipt (`receiptText()`) or one formatted HTML receipt (`fillReceiptHTML()`), both
   headed with the shop name. The PDF's item table has one row per line with **Sl.no / Item name /
-  Qty / Unit Price / Discount / Tax / Total** columns (discount/tax shown as their rate, "—" when
-  zero), followed by a footer with Subtotal / Total Tax / Grand Total (the last with a thick rule
-  above it), same three numbers as the on-screen Summary cards.
+  Qty / Unit Price / Discount / Tax / Total** columns (Sl.no center-aligned under its header;
+  discount/tax shown as their rate, "—" when zero; Qty includes the unit, e.g. "5 kg"), followed by
+  a footer with Subtotal / Total Tax / Grand Total (the last with a thick rule above it), same
+  three numbers as the on-screen Summary cards.
 - **Shop name** field under the header, saved per device, shown on every receipt/share/PDF.
 - **Sound toggle** (speaker icon next to the shop name field, reachable even in mobile Calc mode)
   — synthesised key-click and a rising two-note "confirm" chime on `=`/Add to Sale.
@@ -173,9 +178,10 @@ with a toggle.
 ## 8. Features currently being worked on
 
 **None. The session is closed with no open or half-finished work.** The last thread of work was
-the per-device Item Name field (full-width input, recent/common autocomplete, PDF column rework —
-see §7) — implemented, verified (CDP-driven smoke test plus desktop/mobile/print screenshots),
-committed, and deployed.
+the Qty unit field (`kg`/`pcs`/`box`/…, next to Item name, same autocomplete/PDF treatment — see
+§7) plus centering the PDF's Sl.no column — implemented, verified (CDP-driven smoke test plus
+desktop/mobile/print screenshots), committed, and deployed. That work also surfaced and fixed a
+latent CSS Grid overflow in the two-panel layout (see §9's "grid blowout" entry and §10).
 
 ## 9. Known bugs / limitations / things to watch
 
@@ -235,6 +241,18 @@ committed, and deployed.
     styling (font-size, color, shadows) over trying to screenshot the motion itself.
 - Browsers without `color-mix()` support will show broken/transparent tints in several places
   (buttons, tags, tinted panels) — no fallback colors are defined.
+- **`.carousel`'s grid columns must stay `minmax(0, 1fr) 242px`, not bare `1fr 242px`.** A bare
+  `1fr` track can't auto-shrink below the automatic minimum (content min-width) of whatever's in
+  it — so adding almost anything to the Sale Details panel that itself can't shrink past some
+  width (a fixed-width sibling in a nested flex row, an un-ellipsized label, etc.) can silently
+  force the whole `.carousel` wider than `.app`'s 500px `max-width`, which `.app`'s own
+  `overflow-x: clip` then slices off the right edge of — invisibly, since `getBoundingClientRect()`
+  still reports the (wrong) unclipped geometry and nothing errors. This actually happened when the
+  Qty unit field was added (an extra fixed-width sibling next to Item name) and was only caught by
+  screenshotting, not by the CDP functional checks. If a future change to the Sale Details panel's
+  content produces a similarly cropped-looking screenshot, check `.panel-calc`'s
+  `getBoundingClientRect().right` against `.app`'s — if the former exceeds the latter, this is the
+  bug, and the fix is always `minmax(0, ...)`, never a bigger `.app` max-width or removing the clip.
 - **Possible pre-existing cosmetic issue, not yet confirmed or fixed:** a 390px-wide mobile
   screenshot taken this session showed the Current Sale list's sticky column header rendering
   "SUBTOTALTAX" with no gap between the two words (`.salelist__cols` in the CSS). Not touched or
@@ -295,6 +313,18 @@ committed, and deployed.
   matching the user's own wording — an item used often in the past but not recently would fall out
   of a single MRU-only list; keeping a frequency-ranked list alongside it means an old favorite
   stays suggested.
+- **Unit is a separate narrow field next to Item name, not folded into the Qty button itself.**
+  Qty's own numeric entry is driven by the shared buffer/`activeField` keypad system, which isn't a
+  good fit for free-text like `kg`; and the Qty/Price/Discount/Tax buttons are already a fixed
+  4-column grid with no room for a 5th cell. Placing Unit beside Item name (both plain, independent
+  `<input>`s) keeps the keypad grid untouched and reads naturally as "what am I selling, and in
+  what unit" on one line. Its datalist is a small static curated list (no separate per-device
+  storage) since the per-item template already remembers whatever unit was last used for a named
+  item — a second learned list wasn't worth the added complexity.
+- **PDF's Sl.no column center-aligned, matching its header** — it was previously right-aligned
+  (`class="num"`, shared with the money columns) while its `<th>` used the table's default
+  left-align, so the numbers didn't sit under the word "Sl.no" at all. Given its own `.ctr` class
+  now, used for both the header and body cells.
 - **Fly-to-list animation deliberately slow/large/bright, tuned across three passes** — from an
   initial ~0.7s subtle version (too quick/small to register), to a slower/bigger global pass, to a
   mobile-specific size bump (phones scale the token up further than desktop, since it's read at
@@ -312,8 +342,8 @@ implemented, verified, committed, and deployed:
 - `git status` is clean; `main` is pushed; GitHub Pages last build succeeded and served HTTP 200
   at the moment this was written.
 - `pos-calculator.html` and `index.html` are byte-identical.
-- The last app-code commit was **"Add item name field with per-device autocomplete, PDF item
-  table"** (hash `8682433` as of this writing); this `CLAUDE.md` update is committed immediately
+- The last app-code commit was **"Add a Qty unit field, center Sl.no in the PDF, fix a grid
+  overflow"** (hash `b055412` as of this writing); this `CLAUDE.md` update is committed immediately
   after it as a documentation-only follow-up. **Run `git log -1` for the true current HEAD — any
   hash printed in this file is a snapshot, not a promise.**
 - Repo: https://github.com/mgpvt/pos-calculator (public)
