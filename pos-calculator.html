@@ -1166,6 +1166,7 @@
 
 <datalist id="itemSuggestions"></datalist>
 <datalist id="unitSuggestions">
+  <option value="(none)">
   <option value="pcs"><option value="kg"><option value="g"><option value="ltr">
   <option value="ml"><option value="box"><option value="dozen"><option value="pack">
   <option value="m"><option value="ft"><option value="set"><option value="bag">
@@ -2261,10 +2262,15 @@
     var unitInputs = document.querySelectorAll(".unitfield");
     unitInputs.forEach(function (el) {
       el.addEventListener("input", function () {
-        line.unit = el.value;
+        // "(none)" is a sentinel option in #unitSuggestions so the user can pick "no unit"
+        // straight from the dropdown (typing then deleting already blanks it, but a pure
+        // tap/pick — the only gesture available on mobile — had no way back to blank).
+        var picked = el.value === "(none)" ? "" : el.value;
+        line.unit = picked;
         unitInputs.forEach(function (other) {
           if (other !== el) other.value = line.unit;
         });
+        if (el.value === "(none)") el.value = "";
       });
       // A datalist only offers browsers' own filtered-matches dropdown, filtered against
       // whatever's already typed — so an existing value (e.g. "kg") hides every other unit

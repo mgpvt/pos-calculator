@@ -139,7 +139,10 @@ repo, not something to write down here.)
   both receipt formats, and the PDF's Qty column — and saved per item alongside price/discount/tax.
   Its field clears on focus and restores from `line.unit` on blur (a no-op if something new was
   picked) so the datalist always shows the full pick list instead of the browser's own
-  value-filtered matches hiding every other unit once one is already typed in.
+  value-filtered matches hiding every other unit once one is already typed in. The list's first
+  entry is a `(none)` sentinel option: picking it in the `input` handler sets `line.unit = ""`
+  (and blanks the field), so the user can get back to "no unit" straight from the dropdown —
+  the only clear gesture available on mobile, where typing-then-deleting isn't practical.
   The item name itself flows through everywhere a line item shows up: bold above the qty×price
   line in the Current Sale list, its own line in the plain-text/WhatsApp/Email receipt (unnamed
   items keep the original compact single-line format), and its own **Item name** column in the
