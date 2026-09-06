@@ -928,41 +928,6 @@
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; scroll-behavior: auto !important; animation: none !important; }
   }
-
-  /* ---- Print / save-as-PDF: show only the receipt ---- */
-  .receipt { display: none; }
-  @media print {
-    @page { margin: 12mm; }
-    html, body { background: #fff !important; }
-    .app { display: none !important; }
-    .receipt {
-      display: block;
-      margin: 0;
-      padding: 0;
-      color: #000;
-      background: #fff;
-      font-family: var(--sans);
-      font-size: 11pt;
-      line-height: 1.5;
-    }
-    .receipt h1 {
-      margin: 0 0 2mm;
-      font-size: 15pt;
-      letter-spacing: 0.06em;
-    }
-    .receipt .r-meta { margin: 0 0 5mm; font-size: 9pt; color: #444; }
-    .receipt table { width: 100%; border-collapse: collapse; }
-    .receipt th, .receipt td { padding: 2mm 1mm; text-align: left; vertical-align: top; }
-    .receipt th { border-bottom: 1px solid #000; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.08em; }
-    .receipt td.num, .receipt th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .receipt td.ctr, .receipt th.ctr { text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .receipt td.num small { display: block; font-size: 0.78em; font-weight: 400; color: #666; }
-    .receipt tbody td { border-bottom: 1px solid #ddd; }
-    .receipt .r-tot td { border-top: 1px solid #000; font-weight: 600; padding-top: 2.5mm; }
-    .receipt .r-grand td { border-top: 3px solid #000; font-weight: 700; font-size: 12pt; padding-top: 2mm; }
-    .receipt .r-words { margin: 3mm 0 0; font-size: 9pt; font-style: italic; }
-    .receipt .r-foot { margin: 8mm 0 0; font-size: 8pt; color: #666; }
-  }
 </style>
 
 <div class="app" data-mode="calc">
@@ -1142,7 +1107,7 @@
       <a class="share__opt" id="shOptWa" href="#" target="_blank" rel="noopener">WhatsApp</a>
       <button class="share__opt" id="shOptCopy" type="button">Copy text</button>
       <button class="share__opt" id="shOptShare" type="button" hidden>Share&hellip;</button>
-      <button class="share__opt" id="shOptPrint" type="button">Print / PDF</button>
+      <button class="share__opt" id="shOptPrint" type="button">Download PDF</button>
     </div>
     <p class="share__note" id="shareNote" role="status" aria-live="polite"></p>
   </div>
@@ -1154,8 +1119,10 @@
   <option value="ml"><option value="box"><option value="dozen"><option value="pack">
   <option value="m"><option value="ft"><option value="set"><option value="bag">
 </datalist>
-<div class="receipt" id="receipt" aria-hidden="true"></div>
-
+<!-- PDF is generated directly (no window.print()/print dialog), so nothing the browser adds
+     (its own header/footer, showing the page URL) can ever appear in it. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
   (function () {
     "use strict";
@@ -1957,38 +1924,78 @@
       L.push("Sent from bconnTech Calculator");
       return L.join("\n");
     }
-    function fillReceiptHTML() {
+    // Built directly with jsPDF/autoTable and saved straight to a file — never routed through
+    // window.print(), so there's no print dialog and no browser-added header/footer (which would
+    // show this page's URL) to ever appear in the output.
+    function generatePdf() {
+      if (!window.jspdf || !window.jspdf.jsPDF) { shareNote("PDF library didn't load — check your connection and try again."); return; }
       var s = saleSums();
-      var rows = sale.map(function (it, i) {
-        var qtyDisp = trim(it.qty) + (it.unit ? " " + escapeHtml(it.unit) : "");
-        return "<tr>" +
-          "<td class='ctr'>" + (i + 1) + "</td>" +
-          "<td>" + (it.name ? escapeHtml(it.name) : "NA") + "</td>" +
-          "<td class='num'>" + qtyDisp + "</td>" +
-          "<td class='num'>" + money(it.subtotal) +
-            " <small>(" + qtyDisp + " &times; " + money(it.price) + ")</small></td>" +
-          "<td class='num'>" + (it.discount ? trim(it.discount) + "%" : "&mdash;") + "</td>" +
-          "<td class='num'>" + (it.tax ? trim(it.tax) + "%" : "&mdash;") + "</td>" +
-          "<td class='num'>" + money(it.total) + "</td>" +
-        "</tr>";
-      }).join("");
-      document.getElementById("receipt").innerHTML =
-        "<h1>" + escapeHtml(shopTitle()) + "</h1>" +
-        "<p class='r-meta'>Sale Receipt &middot; " + escapeHtml(fmtWhen()) + "</p>" +
-        "<table><thead><tr>" +
-          "<th class='ctr'>Sl.no</th><th>Item name</th><th class='num'>Qty</th><th class='num'>Subtotal</th>" +
-          "<th class='num'>Discount</th><th class='num'>Tax</th><th class='num'>Total</th>" +
-        "</tr></thead>" +
-        "<tbody>" + rows + "</tbody><tfoot>" +
-          "<tr class='r-tot'><td colspan='3'>Totals</td>" +
-            "<td class='num'>" + money(s.sub) + "</td>" +
-            "<td></td>" +
-            "<td class='num'>" + money(s.tax) + "</td>" +
-            "<td class='num'>" + money(s.grand) + "</td></tr>" +
-          "<tr class='r-grand'><td colspan='6'>Grand Total</td><td class='num'>" + money(s.grand) + "</td></tr>" +
-        "</tfoot></table>" +
-        "<p class='r-words'>" + amountInWords(s.grand) + "</p>" +
-        "<p class='r-foot'>Generated by bconnTech Calculator</p>";
+      var doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+      var margin = 14;
+
+      doc.setFont(undefined, "bold");
+      doc.setFontSize(16);
+      doc.text(shopTitle(), margin, 18);
+
+      doc.setFont(undefined, "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(90);
+      doc.text("Sale Receipt " + MIDDOT + " " + fmtWhen(), margin, 25);
+      doc.setTextColor(0);
+
+      var body = sale.map(function (it, i) {
+        var qtyDisp = trim(it.qty) + (it.unit ? " " + it.unit : "");
+        return [
+          String(i + 1),
+          it.name || "NA",
+          qtyDisp,
+          money(it.subtotal) + " (" + qtyDisp + " x " + money(it.price) + ")",
+          it.discount ? trim(it.discount) + "%" : "-",
+          it.tax ? trim(it.tax) + "%" : "-",
+          money(it.total)
+        ];
+      });
+
+      doc.autoTable({
+        startY: 30,
+        margin: { left: margin, right: margin },
+        theme: "plain",
+        styles: { fontSize: 9, cellPadding: 2, lineColor: [220, 220, 220], lineWidth: 0.1 },
+        headStyles: { fontStyle: "bold", textColor: [20, 30, 80], lineWidth: { bottom: 0.3 }, lineColor: [0, 0, 0] },
+        head: [["Sl.no", "Item name", "Qty", "Subtotal", "Discount", "Tax", "Total"]],
+        body: body,
+        columnStyles: {
+          0: { halign: "center" },
+          2: { halign: "right" },
+          3: { halign: "right" },
+          4: { halign: "right" },
+          5: { halign: "right" },
+          6: { halign: "right" }
+        },
+        foot: [
+          [{ content: "Totals", colSpan: 3 }, money(s.sub), "", money(s.tax), money(s.grand)],
+          [{ content: "Grand Total", colSpan: 6 }, money(s.grand)]
+        ],
+        footStyles: { textColor: [0, 0, 0], lineWidth: { top: 0.3 }, lineColor: [0, 0, 0] },
+        didParseCell: function (data) {
+          if (data.section !== "foot") return;
+          data.cell.styles.halign = data.column.index === 0 ? "left" : "right";
+          if (data.row.index === 1) { data.cell.styles.fontStyle = "bold"; data.cell.styles.fontSize = 12; }
+        }
+      });
+
+      var y = doc.lastAutoTable.finalY + 9;
+      doc.setFontSize(9);
+      doc.setFont(undefined, "italic");
+      doc.text(amountInWords(s.grand), margin, y);
+
+      doc.setFont(undefined, "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(130);
+      doc.text("Generated by bconnTech Calculator", margin, y + 9);
+
+      var safeName = (shopTitle() || "receipt").replace(/[^\w-]+/g, "_").replace(/^_+|_+$/g, "");
+      doc.save((safeName || "receipt") + "_receipt.pdf");
     }
 
     var shareMenuEl = document.getElementById("shareMenu");
@@ -2057,8 +2064,7 @@
         navigator.share({ title: "bconnTech Sale", text: receiptText() }).catch(function () {});
       });
       document.getElementById("shOptPrint").addEventListener("click", function () {
-        fillReceiptHTML();
-        window.print();
+        generatePdf();
       });
     }
 
