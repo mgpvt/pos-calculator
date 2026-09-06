@@ -1,6 +1,6 @@
 # bconnTech Calculator — Project Notes
 
-**Session closed 2026-09-05.** Working tree is clean; everything in this file is committed and
+**Session closed 2026-09-06.** Working tree is clean; everything in this file is committed and
 pushed to `main`, and GitHub Pages is serving the current code. A fresh Claude Code session should
 be able to pick up entirely from this file — no prior conversation needed.
 
@@ -67,8 +67,8 @@ There is no `src/`, no build output, no config files (no `.env`, no `package.jso
 ## 4. "Database" — there isn't one; here's the local-storage schema instead
 
 No server, no database. All persistence is `localStorage`, scoped per browser/device, written
-directly by `pos-calculator.html`'s JS (see `TAX_KEY`/`MODE_KEY`/`SHOP_KEY`/`SOUND_KEY` near the
-top of its `<script>`):
+directly by `pos-calculator.html`'s JS (see `TAX_KEY`/`MODE_KEY`/`SHOP_KEY`/`SOUND_KEY`/
+`ITEMS_RECENT_KEY`/`ITEMS_COMMON_KEY` near the top of its `<script>`):
 
 | Key | Values | Meaning |
 |---|---|---|
@@ -76,6 +76,8 @@ top of its `<script>`):
 | `bconntech.pos.mode` | `"calc"` \| `"sales"` | User's mode preference. Only visibly matters on mobile (≤760px) — see §10. Defaults to `"calc"`. |
 | `bconntech.pos.shop` | string, ≤42 chars | Shop name, editable any time in the bar under the header. Printed on the PDF receipt heading and prefixed to shared text/email subject. Defaults to empty → displays as "bconnTech". |
 | `bconntech.pos.sound` | `"on"` \| `"off"` | UI click/confirm sound toggle. Defaults on. |
+| `bconntech.pos.items.recent` | JSON array, ≤10 entries `{name, qty, price, discount, tax}` | Last 10 distinct item names committed to a sale (most-recent first, by name, case-insensitive). Feeds the `#itemSuggestions` datalist and exact-match autofill. |
+| `bconntech.pos.items.common` | JSON array, ≤5 entries `{name, qty, price, discount, tax, count}` | Top 5 item names by usage count (independent ranking from `recent` — an old favorite stays listed even after 10 newer items have been added). Also feeds the datalist. |
 
 `calculator.html` (the older pocket calculator) has its own, separate keys:
 `bconntech.taxrate` (persisted tax rate) and `bconntech.sound` (click-sound toggle).
@@ -115,6 +117,16 @@ repo, not something to write down here.)
   input rows, each tappable to make it the active keypad target; computed Subtotal / Discount
   Amount / Tax Amount / Total rows below, all aligned in one label/value column. Equal-height with
   the calculator panel.
+- **Item name field**: a full-width text input just below the Qty/Price/Discount/Tax buttons —
+  present in *both* the Sale Details panel and the Calculator panel (so it's there on mobile too,
+  where Sale Details is hidden), the two kept in sync live. Backed by a shared `<datalist
+  id="itemSuggestions">` fed from two per-device `localStorage` lists (see §4): the last 10 distinct
+  names used, and the top 5 by usage count. Typing (or picking a suggestion) that exactly matches a
+  saved name (case-insensitive) autofills qty/price/discount/tax from that item's last-used values.
+  The name flows through everywhere a line item shows up: bold above the qty×price line in the
+  Current Sale list, its own line in the plain-text/WhatsApp/Email receipt (unnamed items keep the
+  original compact single-line format), and its own **Item name** column in the printed/PDF
+  receipt table (see below).
 - **Calculator**: twin LCD (Entry/Input on the left, Total/Result on the right, both auto-shrink
   font size in three tiers so an 8-digit number never overflows or truncates), a Qty/Price/
   Discount/Tax quick-jump row, CE/⌫/±/% controls, and a 4×4 keypad (`7 8 9 ÷ …`). Values are capped
@@ -139,9 +151,10 @@ repo, not something to write down here.)
   cheque form ("Twelve thousand seven hundred sixteen and 78/100") below them.
 - **Share Sale panel**: Email / WhatsApp / Copy / Share… / Print-PDF, all built from one formatted
   plain-text receipt (`receiptText()`) or one formatted HTML receipt (`fillReceiptHTML()`), both
-  headed with the shop name and both showing the same per-item Subtotal/Tax/Total breakdown. The
-  PDF adds a thin rule above a single "Totals" row (aligned to the item columns) and a thicker rule
-  above Grand Total.
+  headed with the shop name. The PDF's item table has one row per line with **Sl.no / Item name /
+  Qty / Unit Price / Discount / Tax / Total** columns (discount/tax shown as their rate, "—" when
+  zero), followed by a footer with Subtotal / Total Tax / Grand Total (the last with a thick rule
+  above it), same three numbers as the on-screen Summary cards.
 - **Shop name** field under the header, saved per device, shown on every receipt/share/PDF.
 - **Sound toggle** (speaker icon next to the shop name field, reachable even in mobile Calc mode)
   — synthesised key-click and a rising two-note "confirm" chime on `=`/Add to Sale.
@@ -160,9 +173,9 @@ with a toggle.
 ## 8. Features currently being worked on
 
 **None. The session is closed with no open or half-finished work.** The last thread of work was
-the fly-to-list animation, which went through three refinement passes (slower/bigger/brighter
-overall → bigger + purer yellow specifically on mobile → drop the yellow border/halo around the
-pill) — the last of those is implemented, verified, committed, and deployed.
+the per-device Item Name field (full-width input, recent/common autocomplete, PDF column rework —
+see §7) — implemented, verified (CDP-driven smoke test plus desktop/mobile/print screenshots),
+committed, and deployed.
 
 ## 9. Known bugs / limitations / things to watch
 
@@ -190,6 +203,25 @@ pill) — the last of those is implemented, verified, committed, and deployed.
 - **No automated tests, no linter, no CI.** All verification was manual: screenshotting/PDF-printing
   via headless Chrome (see §13) plus visual review. There's no regression safety net for future
   changes.
+- **Headless Chrome can be driven interactively via CDP, not just screenshotted at load.** This
+  environment has Python's `websocket-client` installed, so beyond the static
+  `--screenshot`/`--print-to-pdf` flags, you can launch
+  `chrome.exe --headless=new --remote-debugging-port=9333 --remote-allow-origins=* --user-data-dir=<scratch dir>`,
+  open a tab with `PUT http://localhost:9333/json/new?<file-url>` (must be `PUT`, not `GET`), then
+  speak CDP over the returned `webSocketDebuggerUrl` (`Runtime.evaluate` to click buttons/type into
+  fields/read `localStorage`, `Emulation.setDeviceMetricsOverride` for viewport,
+  `Emulation.setEmulatedMedia:{media:"print"}` + a real click on the Print/PDF button — not a bare
+  reference to the page's closure-scoped `fillReceiptHTML`, which is invisible to
+  `Runtime.evaluate` and throws — to render the print stylesheet, `Page.captureScreenshot` to save
+  a PNG). This was used this session to actually exercise the Item Name autofill/storage logic
+  end-to-end (not just eyeball the layout) and is worth reaching for again whenever a change is
+  behavioral, not just visual. Stub `window.print = function(){}` before clicking Print/PDF so it
+  doesn't hang. Kill the chrome.exe process(es) when done.
+- **A `�` in this tool's own captured command output does not mean the app mangled a character.**
+  Printing non-ASCII (×, −, —, ·) through this Windows shell to the harness can itself mangle the
+  *display* of otherwise-correct UTF-8; before concluding the app corrupted a character, verify by
+  writing the value to a file with explicit `encoding="utf-8"` and inspecting bytes/codepoints (or
+  screenshot it) rather than trusting the printed terminal text.
 - **No real-device testing performed** — the mobile layout, the sound toggle, and the fly-to-list
   animation have only been verified via headless Chrome window-size emulation, not an actual phone.
   Two headless-Chrome quirks to remember when verifying future changes:
@@ -203,6 +235,12 @@ pill) — the last of those is implemented, verified, committed, and deployed.
     styling (font-size, color, shadows) over trying to screenshot the motion itself.
 - Browsers without `color-mix()` support will show broken/transparent tints in several places
   (buttons, tags, tinted panels) — no fallback colors are defined.
+- **Possible pre-existing cosmetic issue, not yet confirmed or fixed:** a 390px-wide mobile
+  screenshot taken this session showed the Current Sale list's sticky column header rendering
+  "SUBTOTALTAX" with no gap between the two words (`.salelist__cols` in the CSS). Not touched or
+  introduced by this session's item-name work — noticed only incidentally in a screenshot at that
+  exact width. Worth a look next time the mobile ledger header is on screen, but not investigated
+  further since it's outside what was asked.
 - **Two different Claude Artifacts share the exact title "bconnTech Calculator"** — don't confuse
   them (`Artifact` → `action: "list"` shows both):
   - `https://claude.ai/code/artifact/b8ac173a-8651-44e9-a270-ee020f901148` (favicon 🛒) is
@@ -240,6 +278,23 @@ pill) — the last of those is implemented, verified, committed, and deployed.
   (no "dollars"/"rupees") because the app has no currency symbol anywhere and shouldn't assume one.
 - **Serial numbers only shown once there's more than one item** — a single-item sale reads better
   without a redundant "1)".
+- **Item name is a plain `<input>`, not routed through the numeric buffer/`activeField` system**
+  that Qty/Price/Discount/Tax use. Free-text product names need a real keyboard, not the calculator
+  keypad, so it's wired independently: `input` events write straight to `line.name` and mirror the
+  *other* copy of the field (Sale Details panel vs. Calculator panel each have their own `<input
+  class="itemname">`, kept in sync so either can be used depending on which panel is visible).
+  `render()` only overwrites a field's `.value` when it isn't `document.activeElement`, so it never
+  fights the one currently being typed into.
+- **Autofill triggers on exact case-insensitive name match, not on every keystroke.** "Fill the
+  rest" only fires once what's typed matches a saved item's name exactly (typing further past a
+  match, e.g. continuing to type after a match, simply stops re-triggering it) — picking a
+  `<datalist>` suggestion produces the same exact-match `input` event, so it works both ways.
+  Qty *and* price/discount/tax are all overwritten from the saved record on a match, since the ask
+  was explicitly to "fill the rest," not just the price.
+- **Two separate localStorage lists (`recent`, capped 10; `common`, capped 5) rather than one**,
+  matching the user's own wording — an item used often in the past but not recently would fall out
+  of a single MRU-only list; keeping a frequency-ranked list alongside it means an old favorite
+  stays suggested.
 - **Fly-to-list animation deliberately slow/large/bright, tuned across three passes** — from an
   initial ~0.7s subtle version (too quick/small to register), to a slower/bigger global pass, to a
   mobile-specific size bump (phones scale the token up further than desktop, since it's read at
@@ -257,16 +312,18 @@ implemented, verified, committed, and deployed:
 - `git status` is clean; `main` is pushed; GitHub Pages last build succeeded and served HTTP 200
   at the moment this was written.
 - `pos-calculator.html` and `index.html` are byte-identical.
-- The last app-code commit was **"Remove the yellow border/halo from the fly-to-list token"**
-  (hash `6bf4676` as of this writing); this `CLAUDE.md` rewrite is committed immediately after it
-  as a documentation-only follow-up. **Run `git log -1` for the true current HEAD — any hash
-  printed in this file is a snapshot, not a promise.**
+- The last app-code commit was **"Add item name field with per-device autocomplete, PDF item
+  table"** (hash `8682433` as of this writing); this `CLAUDE.md` update is committed immediately
+  after it as a documentation-only follow-up. **Run `git log -1` for the true current HEAD — any
+  hash printed in this file is a snapshot, not a promise.**
 - Repo: https://github.com/mgpvt/pos-calculator (public)
 - Live site: https://mgpvt.github.io/pos-calculator/
-- Claude Artifact for `pos-calculator.html` (private preview, matching the last in-session
-  publish): `https://claude.ai/code/artifact/b8ac173a-8651-44e9-a270-ee020f901148` — there is a
-  second, similarly-titled artifact for the other file; see the disambiguation note in §9 before
-  republishing either.
+- Claude Artifact for `pos-calculator.html` (private preview):
+  `https://claude.ai/code/artifact/b8ac173a-8651-44e9-a270-ee020f901148` — **not republished this
+  session**, so it no longer reflects the Item Name feature above; it still shows whatever was last
+  published there. Republish with that same `url` (see §12 step 5) if the user wants the Artifact
+  preview current too. There is a second, similarly-titled artifact for the other file; see the
+  disambiguation note in §9 before republishing either.
 
 **No open questions are pending from the user.** There is nothing mid-flight to resume — the next
 session starts fresh on whatever the user asks for next.
