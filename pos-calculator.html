@@ -718,6 +718,50 @@
     font-size: 0.76rem;
   }
 
+  /* ---- Overall discount: one flat/percent knock off the whole sale's grand total ---- */
+  .overallDisc {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 9px 13px;
+    box-shadow: var(--shadow-md);
+    border-top: 3px solid var(--c-discount);
+  }
+  .overallDisc label {
+    flex: 1;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .overallDisc input {
+    width: 3.4em;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--card-2);
+    border: 1.5px solid var(--line-strong);
+    border-radius: 6px;
+    padding: 3px 5px;
+  }
+  .overallDisc input:focus { outline: none; border-color: var(--c-discount); }
+  .overallDisc__pct { font-weight: 700; color: var(--ink-dim); }
+  .overallDisc__amt {
+    min-width: 4.6em;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--c-discount);
+  }
+
   /* ============ Bottom summary ============ */
   .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .sumcard {
@@ -1092,6 +1136,13 @@
     </div>
   </section>
 
+  <div class="overallDisc">
+    <label for="overallDiscount">Overall Discount</label>
+    <input id="overallDiscount" type="text" inputmode="decimal" maxlength="6" value="0">
+    <span class="overallDisc__pct">%</span>
+    <span class="overallDisc__amt" data-role="overallDiscAmt"></span>
+  </div>
+
   <section class="summary" aria-label="Sale summary">
     <div class="sumcard sumcard--sub"><span>Subtotal</span><span data-role="s-subtotal">0.00</span></div>
     <div class="sumcard sumcard--tax"><span>Total Tax</span><span data-role="s-tax">0.00</span></div>
@@ -1354,6 +1405,7 @@
 
     var line = { name: "", unit: "", qty: 1, price: 0, discount: 0, tax: readTax(), calc: 0 };
     var sale = [];
+    var overallDiscount = 0;      // % taken off the whole sale's grand total, on top of any per-item discount
     var editIndex = null;                 // index of the sale item being edited, or null
     var mode = readMode();                // stored preference: "calc" | "sales"
     var currency = readCurrency();        // stored preference: currency code, e.g. "USD"
@@ -1729,6 +1781,7 @@
     function allClear() {
       sale = [];
       editIndex = null;
+      overallDiscount = 0;
       line = { name: "", unit: "", qty: 1, price: 0, discount: 0, tax: readTax(), calc: 0 };
       activeField = emode() === "calc" ? "calc" : "qty";
       buffer = ""; pendingOp = null; awaitingOperand = false; justEvaluated = false;
@@ -1826,12 +1879,18 @@
         role("r-total").textContent = withSymbol(money8(eff.total));
 
         renderList();
-        var sums = sale.reduce(function (a, it) {
-          a.sub += it.subtotal; a.tax += it.taxAmt; a.grand += it.total; return a;
-        }, { sub: 0, tax: 0, grand: 0 });
+        var sums = saleSums();
         role("s-subtotal").textContent = withSymbol(money8(sums.sub));
         role("s-tax").textContent = withSymbol(money8(sums.tax));
         role("s-grand").textContent = withSymbol(money8(sums.grand));
+
+        var odInput = $("#overallDiscount");
+        if (odInput && document.activeElement !== odInput) odInput.value = trim(overallDiscount);
+        var odAmt = role("overallDiscAmt");
+        if (odAmt) {
+          odAmt.textContent = sums.overallDiscountAmt > 0
+            ? MINUS + withSymbol(money8(sums.overallDiscountAmt)) : "";
+        }
 
         var lc = role("listCols");
         if (lc) lc.hidden = sale.length === 0;
@@ -1912,9 +1971,19 @@
     /* ---------- Share the sale ---------- */
 
     function saleSums() {
-      return sale.reduce(function (a, it) {
+      var base = sale.reduce(function (a, it) {
         a.sub += it.subtotal; a.tax += it.taxAmt; a.grand += it.total; return a;
       }, { sub: 0, tax: 0, grand: 0 });
+      var pct = Math.max(0, Math.min(100, +overallDiscount || 0));
+      var discAmt = base.grand * pct / 100;
+      return {
+        sub: base.sub,
+        tax: base.tax,
+        preDiscountGrand: base.grand,
+        overallDiscountPct: pct,
+        overallDiscountAmt: discAmt,
+        grand: base.grand - discAmt
+      };
     }
     function fmtWhen() {
       try {
@@ -1943,6 +2012,9 @@
       L.push(rule);
       L.push("Subtotal: " + withSymbol(money(s.sub)));
       L.push("Total Tax: " + withSymbol(money(s.tax)));
+      if (s.overallDiscountAmt > 0) {
+        L.push("Overall Discount (" + trim(s.overallDiscountPct) + "%): " + MINUS + withSymbol(money(s.overallDiscountAmt)));
+      }
       L.push("GRAND TOTAL: " + withSymbol(money(s.grand)));
       L.push("In words: " + amountInWords(s.grand));
       L.push(rule);
@@ -1987,6 +2059,17 @@
         ];
       });
 
+      var footRows = [
+        [{ content: "Totals", colSpan: 3 }, money(s.sub), "", money(s.tax), money(s.preDiscountGrand)]
+      ];
+      if (s.overallDiscountAmt > 0) {
+        footRows.push([
+          { content: "Overall Discount (" + trim(s.overallDiscountPct) + "%)", colSpan: 6 },
+          "-" + money(s.overallDiscountAmt)
+        ]);
+      }
+      footRows.push([{ content: "Grand Total", colSpan: 6 }, currency + " " + money(s.grand)]);
+
       doc.autoTable({
         startY: 30,
         margin: { left: margin, right: margin },
@@ -1997,21 +2080,18 @@
         body: body,
         columnStyles: {
           0: { halign: "center" },
-          2: { halign: "right" },
+          2: { halign: "center" },
           3: { halign: "right" },
-          4: { halign: "right" },
-          5: { halign: "right" },
+          4: { halign: "center" },
+          5: { halign: "center" },
           6: { halign: "right" }
         },
-        foot: [
-          [{ content: "Totals", colSpan: 3 }, money(s.sub), "", money(s.tax), money(s.grand)],
-          [{ content: "Grand Total", colSpan: 6 }, currency + " " + money(s.grand)]
-        ],
+        foot: footRows,
         footStyles: { textColor: [0, 0, 0], lineWidth: { top: 0.3 }, lineColor: [0, 0, 0] },
         didParseCell: function (data) {
           if (data.section !== "foot") return;
           data.cell.styles.halign = data.column.index === 0 ? "left" : "right";
-          if (data.row.index === 1) { data.cell.styles.fontStyle = "bold"; data.cell.styles.fontSize = 12; }
+          if (data.row.index === footRows.length - 1) { data.cell.styles.fontStyle = "bold"; data.cell.styles.fontSize = 12; }
         }
       });
 
@@ -2133,6 +2213,16 @@
         shopTimer = setTimeout(function () { saveShop(shopInput.value); }, 300);
       });
       shopInput.addEventListener("blur", function () { saveShop(shopInput.value); });
+    }
+
+    var overallDiscInput = document.getElementById("overallDiscount");
+    if (overallDiscInput) {
+      overallDiscInput.addEventListener("input", function () {
+        var v = parseFloat(overallDiscInput.value);
+        overallDiscount = isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
+        render();
+      });
+      overallDiscInput.addEventListener("focus", function () { overallDiscInput.select(); });
     }
 
     var currencySelect = document.getElementById("currencySelect");
