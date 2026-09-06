@@ -1136,12 +1136,18 @@
     var ITEMS_RECENT_MAX = 10, ITEMS_COMMON_MAX = 5;
     var CURRENCY_KEY = "bconntech.pos.currency";
     // code -> decimal places (ISO 4217 minor units; a few Gulf currencies use 3, JPY uses 0).
+    // symbol: shown wherever there's room (Sale Details/Summary/receipts) — a real glyph for the
+    // currencies that have one in common use, the plain code as a stand-in for those that don't
+    // (most Gulf currencies have no single widely-recognized Latin-compatible glyph).
     var CURRENCIES = [
-      { code: "USD", decimals: 2 }, { code: "EUR", decimals: 2 }, { code: "GBP", decimals: 2 },
-      { code: "INR", decimals: 2 }, { code: "AED", decimals: 2 }, { code: "SAR", decimals: 2 },
-      { code: "QAR", decimals: 2 }, { code: "KWD", decimals: 3 }, { code: "BHD", decimals: 3 },
-      { code: "OMR", decimals: 3 }, { code: "PKR", decimals: 2 }, { code: "EGP", decimals: 2 },
-      { code: "JPY", decimals: 0 }, { code: "CAD", decimals: 2 }, { code: "AUD", decimals: 2 }
+      { code: "USD", decimals: 2, symbol: "$" }, { code: "EUR", decimals: 2, symbol: "€" },
+      { code: "GBP", decimals: 2, symbol: "£" }, { code: "INR", decimals: 2, symbol: "₹" },
+      { code: "AED", decimals: 2, symbol: "AED" }, { code: "SAR", decimals: 2, symbol: "SAR" },
+      { code: "QAR", decimals: 2, symbol: "QAR" }, { code: "KWD", decimals: 3, symbol: "KWD" },
+      { code: "BHD", decimals: 3, symbol: "BHD" }, { code: "OMR", decimals: 3, symbol: "OMR" },
+      { code: "PKR", decimals: 2, symbol: "₨" }, { code: "EGP", decimals: 2, symbol: "EGP" },
+      { code: "JPY", decimals: 0, symbol: "¥" }, { code: "CAD", decimals: 2, symbol: "$" },
+      { code: "AUD", decimals: 2, symbol: "$" }
     ];
     var DEFAULT_CURRENCY = "USD";
 
@@ -1253,6 +1259,27 @@
       var found = null;
       CURRENCIES.forEach(function (cur) { if (cur.code === currency) found = cur; });
       return found ? found.decimals : 2;
+    }
+    function curSymbol() {
+      var found = null;
+      CURRENCIES.forEach(function (cur) { if (cur.code === currency) found = cur; });
+      return found ? found.symbol : currency;
+    }
+    // Prefix an already-formatted money string with the currency symbol/code, e.g. "$1,234.56"
+    // or "AED 1,234.56" (a space after multi-letter stand-ins, none for a single glyph). Leaves
+    // "ERROR" alone rather than prefixing a symbol onto it.
+    function withSymbol(str) {
+      if (str === "ERROR") return str;
+      var sym = curSymbol();
+      return (sym.length > 1 ? sym + " " : sym) + str;
+    }
+    // jsPDF's built-in fonts only reliably render WinAnsi glyphs ($ € £ ¥) — ₹/₨ would come out
+    // as missing-glyph boxes, so the PDF falls back to the plain currency code for those instead.
+    function pdfWithSymbol(str) {
+      if (str === "ERROR") return str;
+      var sym = curSymbol();
+      if (["$", "€", "£", "¥"].indexOf(sym) === -1) sym = currency;
+      return (sym.length > 1 ? sym + " " : sym) + str;
     }
     // Qty/Discount/Tax stay at plain 2dp regardless of currency; only fields that
     // hold an actual money amount (Price, and the plain-Calculator result) follow
@@ -1427,7 +1454,8 @@
       if (frac >= scale) { whole += 1; frac -= scale; }
       var s = intToWords(whole) + (d > 0 ? " and " + padNum(frac, d) + "/" + scale : "");
       if (neg) s = "minus " + s;
-      return s.charAt(0).toUpperCase() + s.slice(1);
+      s = s.charAt(0).toUpperCase() + s.slice(1);
+      return s + " (" + currency + ")"; // the code, not the symbol — reads cleaner in prose
     }
     function clamp8(n) {
       if (!isFinite(n)) return 0;
@@ -1791,25 +1819,27 @@
         var eff = effectiveLine();
 
         ["qty", "price", "discount", "tax"].forEach(function (f) {
-          var v = role("fv-" + f); if (v) v.textContent = fieldText(f);
+          // The narrow Calculator quick-jump button (fn-*) skips the symbol — no room to spare
+          // there — but the roomier Sale Details row (fv-*) gets it for Price.
+          var v = role("fv-" + f); if (v) v.textContent = f === "price" ? withSymbol(fieldText(f)) : fieldText(f);
           var fn = role("fn-" + f); if (fn) fn.textContent = fieldText(f);
         });
         document.querySelectorAll(".row--in, .fn").forEach(function (b) {
           b.classList.toggle("is-active", b.dataset.field === activeField);
         });
 
-        role("r-subtotal").textContent = money8(eff.subtotal);
-        role("r-discount").textContent = MINUS + money8(eff.discountAmt);
-        role("r-tax").textContent = money8(eff.taxAmt);
-        role("r-total").textContent = money8(eff.total);
+        role("r-subtotal").textContent = withSymbol(money8(eff.subtotal));
+        role("r-discount").textContent = MINUS + withSymbol(money8(eff.discountAmt));
+        role("r-tax").textContent = withSymbol(money8(eff.taxAmt));
+        role("r-total").textContent = withSymbol(money8(eff.total));
 
         renderList();
         var sums = sale.reduce(function (a, it) {
           a.sub += it.subtotal; a.tax += it.taxAmt; a.grand += it.total; return a;
         }, { sub: 0, tax: 0, grand: 0 });
-        role("s-subtotal").textContent = money8(sums.sub);
-        role("s-tax").textContent = money8(sums.tax);
-        role("s-grand").textContent = money8(sums.grand);
+        role("s-subtotal").textContent = withSymbol(money8(sums.sub));
+        role("s-tax").textContent = withSymbol(money8(sums.tax));
+        role("s-grand").textContent = withSymbol(money8(sums.grand));
 
         var lc = role("listCols");
         if (lc) lc.hidden = sale.length === 0;
@@ -1833,9 +1863,12 @@
         setLcd(role("d-entry"), fieldText(activeField));
         setLcd(role("d-total"), money8(eff.total));
         role("entryLabel").textContent = "Entry " + MIDDOT + " " + FIELDS[activeField].label;
-        role("totalLabel").textContent = "Total";
+        // The symbol goes on the label, not the digits themselves — the LCD's tiered
+        // font-shrinking already exists to keep an 8-digit number from overflowing, so a
+        // prefix glued onto the value would only make that worse.
+        role("totalLabel").textContent = "Total (" + curSymbol() + ")";
         role("d-echo").textContent =
-          trim(eff.qty) + (eff.unit ? " " + eff.unit : "") + " " + TIMES + " " + money(eff.price) +
+          trim(eff.qty) + (eff.unit ? " " + eff.unit : "") + " " + TIMES + " " + withSymbol(money(eff.price)) +
           " " + MINUS + " " + trim(eff.discount) + "% + " + trim(eff.tax) + "%";
       } else {
         var shown = buffer !== "" ? buffer : trim(line.calc);
@@ -1843,7 +1876,7 @@
         setLcd(role("d-entry"), shown);
         setLcd(role("d-total"), money8(result));
         role("entryLabel").textContent = "Input";
-        role("totalLabel").textContent = "Result";
+        role("totalLabel").textContent = "Result (" + curSymbol() + ")";
         role("d-echo").textContent = "";
       }
 
@@ -1875,7 +1908,7 @@
         var nm = it.name ? '<span class="li__name">' + escapeHtml(it.name) + '</span>' : "";
         return '' +
           '<div class="' + cls + '" data-i="' + i + '" tabindex="0" aria-label="Edit item ' + (i + 1) + '" title="Tap to edit">' +
-            '<span class="li__desc">' + sn + nm + trim(it.qty) + (it.unit ? ' ' + escapeHtml(it.unit) : '') + ' ' + TIMES + ' ' + money(it.price) + sub + '</span>' +
+            '<span class="li__desc">' + sn + nm + trim(it.qty) + (it.unit ? ' ' + escapeHtml(it.unit) : '') + ' ' + TIMES + ' ' + withSymbol(money(it.price)) + sub + '</span>' +
             '<span class="li__sub" title="Subtotal">' + money(it.subtotal) + '</span>' +
             '<span class="li__tax" title="Tax amount">' + money(it.taxAmt) + '</span>' +
             '<span class="li__total" title="Line total">' + money(it.total) + '</span>' +
@@ -1910,15 +1943,15 @@
         if (it.tax) tags.push("+" + trim(it.tax) + "% tax");
         var prefix = numbered ? (i + 1) + ") " : "";
         if (it.name) { L.push(prefix + it.name); prefix = "   "; }
-        L.push(prefix + trim(it.qty) + (it.unit ? " " + it.unit : "") + " " + TIMES + " " + money(it.price) +
+        L.push(prefix + trim(it.qty) + (it.unit ? " " + it.unit : "") + " " + TIMES + " " + withSymbol(money(it.price)) +
           (tags.length ? " (" + tags.join(" " + MIDDOT + " ") + ")" : ""));
-        L.push("   Subtotal " + money(it.subtotal) + " " + MIDDOT +
-          " Tax " + money(it.taxAmt) + " " + MIDDOT + " Total " + money(it.total));
+        L.push("   Subtotal " + withSymbol(money(it.subtotal)) + " " + MIDDOT +
+          " Tax " + withSymbol(money(it.taxAmt)) + " " + MIDDOT + " Total " + withSymbol(money(it.total)));
       });
       L.push(rule);
-      L.push("Subtotal: " + money(s.sub));
-      L.push("Total Tax: " + money(s.tax));
-      L.push("GRAND TOTAL: " + money(s.grand));
+      L.push("Subtotal: " + withSymbol(money(s.sub)));
+      L.push("Total Tax: " + withSymbol(money(s.tax)));
+      L.push("GRAND TOTAL: " + withSymbol(money(s.grand)));
       L.push("In words: " + amountInWords(s.grand));
       L.push(rule);
       L.push("Sent from bconnTech Calculator");
@@ -1952,10 +1985,10 @@
           String(i + 1),
           it.name || "NA",
           qtyDisp,
-          money(it.subtotal) + " (" + qtyDisp + " x " + money(it.price) + ")",
+          pdfWithSymbol(money(it.subtotal)) + " (" + qtyDisp + " x " + pdfWithSymbol(money(it.price)) + ")",
           it.discount ? trim(it.discount) + "%" : "-",
           it.tax ? trim(it.tax) + "%" : "-",
-          money(it.total)
+          pdfWithSymbol(money(it.total))
         ];
       });
 
@@ -1976,8 +2009,8 @@
           6: { halign: "right" }
         },
         foot: [
-          [{ content: "Totals", colSpan: 3 }, money(s.sub), "", money(s.tax), money(s.grand)],
-          [{ content: "Grand Total", colSpan: 6 }, money(s.grand)]
+          [{ content: "Totals", colSpan: 3 }, pdfWithSymbol(money(s.sub)), "", pdfWithSymbol(money(s.tax)), pdfWithSymbol(money(s.grand))],
+          [{ content: "Grand Total", colSpan: 6 }, pdfWithSymbol(money(s.grand))]
         ],
         footStyles: { textColor: [0, 0, 0], lineWidth: { top: 0.3 }, lineColor: [0, 0, 0] },
         didParseCell: function (data) {
@@ -2065,7 +2098,7 @@
         shareToggleEl.setAttribute("aria-expanded", opening ? "true" : "false");
         if (opening) {
           var txt = receiptText();
-          var subj = shopTitle() + " " + MIDDOT + " sale receipt " + MIDDOT + " total " + money(saleSums().grand);
+          var subj = shopTitle() + " " + MIDDOT + " sale receipt " + MIDDOT + " total " + withSymbol(money(saleSums().grand));
           document.getElementById("shOptEmail").href =
             "mailto:?subject=" + encodeURIComponent(subj) + "&body=" + encodeURIComponent(txt);
           document.getElementById("shOptWa").href =
