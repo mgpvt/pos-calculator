@@ -243,6 +243,20 @@
   .shopbar__input::placeholder { color: var(--ink-dim); font-weight: 500; }
   .shopbar__input:focus { outline: none; }
   .shopbar:focus-within { border-color: var(--c-qty); }
+  .currselect {
+    flex: none;
+    height: 24px;
+    padding: 0 4px;
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    background: var(--card-2);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .currselect:focus { outline: none; border-color: var(--c-qty); }
   .sndbtn {
     flex: none;
     width: 26px;
@@ -966,6 +980,7 @@
     <input id="shopName" class="shopbar__input" type="text" maxlength="42"
       placeholder="Enter shop name" autocomplete="organization"
       aria-label="Shop name (saved on this device, shown on receipts)">
+    <select id="currencySelect" class="currselect" aria-label="Currency (saved on this device)" title="Currency"></select>
     <button class="sndbtn" id="soundToggle" type="button" aria-pressed="true" title="Button click sounds">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M4 9v6h4l5 4V5L8 9H4z"></path>
@@ -1136,6 +1151,16 @@
     var ITEMS_RECENT_KEY = "bconntech.pos.items.recent",
         ITEMS_COMMON_KEY = "bconntech.pos.items.common";
     var ITEMS_RECENT_MAX = 10, ITEMS_COMMON_MAX = 5;
+    var CURRENCY_KEY = "bconntech.pos.currency";
+    // code -> decimal places (ISO 4217 minor units; a few Gulf currencies use 3, JPY uses 0).
+    var CURRENCIES = [
+      { code: "USD", decimals: 2 }, { code: "EUR", decimals: 2 }, { code: "GBP", decimals: 2 },
+      { code: "INR", decimals: 2 }, { code: "AED", decimals: 2 }, { code: "SAR", decimals: 2 },
+      { code: "QAR", decimals: 2 }, { code: "KWD", decimals: 3 }, { code: "BHD", decimals: 3 },
+      { code: "OMR", decimals: 3 }, { code: "PKR", decimals: 2 }, { code: "EGP", decimals: 2 },
+      { code: "JPY", decimals: 0 }, { code: "CAD", decimals: 2 }, { code: "AUD", decimals: 2 }
+    ];
+    var DEFAULT_CURRENCY = "USD";
 
     /* ---------- Sound (synthesised, Web Audio) ---------- */
     var soundOn = true;
@@ -1232,6 +1257,27 @@
       } catch (e) { return "calc"; }
     }
 
+    function readCurrency() {
+      try {
+        var c = localStorage.getItem(CURRENCY_KEY);
+        return CURRENCIES.some(function (cur) { return cur.code === c; }) ? c : DEFAULT_CURRENCY;
+      } catch (e) { return DEFAULT_CURRENCY; }
+    }
+    function saveCurrency(v) {
+      try { localStorage.setItem(CURRENCY_KEY, v); } catch (e) {}
+    }
+    function curDecimals() {
+      var found = null;
+      CURRENCIES.forEach(function (cur) { if (cur.code === currency) found = cur; });
+      return found ? found.decimals : 2;
+    }
+    // Qty/Discount/Tax stay at plain 2dp regardless of currency; only fields that
+    // hold an actual money amount (Price, and the plain-Calculator result) follow
+    // the selected currency's own decimal places.
+    function entryDecimals() {
+      return (activeField === "price" || activeField === "calc") ? curDecimals() : 2;
+    }
+
     /* ---------- Saved items (per device): recent + most-commonly-used ---------- */
     function sameName(a, b) {
       return (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
@@ -1308,6 +1354,7 @@
     var sale = [];
     var editIndex = null;                 // index of the sale item being edited, or null
     var mode = readMode();                // stored preference: "calc" | "sales"
+    var currency = readCurrency();        // stored preference: currency code, e.g. "USD"
 
     var narrowMq = window.matchMedia("(max-width: 760px)");
     // On the web both panels are always shown; the Calc-only view is a mobile thing.
@@ -1329,15 +1376,20 @@
 
     function money(n) {
       if (!isFinite(n)) n = 0;
-      return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      var d = curDecimals();
+      return n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
     }
     function money8(n) {
       if (!isFinite(n) || Math.abs(Math.round(n)) > MAX_VALUE) return "ERROR";
       return money(n);
     }
-    function trim(n) {
+    // decimals: how many places to round/display to. Omitted = 2 (qty/discount/tax);
+    // callers touching a money-valued field (price, or the plain-Calculator result)
+    // pass entryDecimals() so a 3-decimal currency isn't silently rounded to 2.
+    function trim(n, decimals) {
       n = +n || 0;
-      return String(Math.round(n * 100) / 100);
+      var f = Math.pow(10, decimals == null ? 2 : decimals);
+      return String(Math.round(n * f) / f);
     }
     function escapeHtml(t) {
       return String(t).replace(/[&<>"]/g, function (c) {
@@ -1375,14 +1427,21 @@
       }
       return parts.join(" ");
     }
+    function padNum(n, width) {
+      var s = String(n);
+      while (s.length < width) s = "0" + s;
+      return s;
+    }
     function amountInWords(n) {
       if (!isFinite(n) || Math.abs(n) > MAX_VALUE) return "";
+      var d = curDecimals();
+      var scale = Math.pow(10, d);
       var neg = n < 0;
       n = Math.abs(n);
       var whole = Math.floor(n + 1e-9);
-      var cents = Math.round((n - whole) * 100);
-      if (cents >= 100) { whole += 1; cents -= 100; }
-      var s = intToWords(whole) + " and " + (cents < 10 ? "0" + cents : cents) + "/100";
+      var frac = d > 0 ? Math.round((n - whole) * scale) : 0;
+      if (frac >= scale) { whole += 1; frac -= scale; }
+      var s = intToWords(whole) + (d > 0 ? " and " + padNum(frac, d) + "/" + scale : "");
       if (neg) s = "minus " + s;
       return s.charAt(0).toUpperCase() + s.slice(1);
     }
@@ -1450,17 +1509,20 @@
       freshEntryIfNeeded();
       if (buffer === "0") buffer = "";
       if (buffer.replace(/[-.]/g, "").length >= MAX_DIGITS) return;
+      var dot = buffer.indexOf(".");
+      if (dot !== -1 && buffer.length - dot - 1 >= entryDecimals()) return;
       buffer += d;
       render();
     }
     function inputDot() {
       freshEntryIfNeeded();
+      if (entryDecimals() === 0) return; // whole-currency (e.g. JPY): no fractional entry
       if (buffer === "") buffer = "0";
       if (buffer.indexOf(".") === -1) buffer += ".";
       render();
     }
     function backspace() {
-      if (buffer === "") buffer = trim(line[activeField]);
+      if (buffer === "") buffer = trim(line[activeField], entryDecimals());
       buffer = buffer.slice(0, -1);
       if (buffer === "" || buffer === "-") { line[activeField] = 0; buffer = ""; }
       if (activeField === "tax") saveTax(currentNumber());
@@ -1473,12 +1535,12 @@
       render();
     }
     function negate() {
-      buffer = trim(-currentNumber());
+      buffer = trim(-currentNumber(), entryDecimals());
       justEvaluated = false; awaitingOperand = false;
       render();
     }
     function percent() {
-      buffer = trim(currentNumber() / 100);
+      buffer = trim(currentNumber() / 100, entryDecimals());
       justEvaluated = false; awaitingOperand = false;
       render();
     }
@@ -1501,7 +1563,7 @@
       pendingOp = op;
       awaitingOperand = true;
       justEvaluated = false;
-      buffer = trim(clamp8(pendingAcc));
+      buffer = trim(clamp8(pendingAcc), entryDecimals());
       render();
     }
     function equals() {
@@ -1981,6 +2043,19 @@
         shopTimer = setTimeout(function () { saveShop(shopInput.value); }, 300);
       });
       shopInput.addEventListener("blur", function () { saveShop(shopInput.value); });
+    }
+
+    var currencySelect = document.getElementById("currencySelect");
+    if (currencySelect) {
+      currencySelect.innerHTML = CURRENCIES.map(function (cur) {
+        return '<option value="' + cur.code + '">' + cur.code + '</option>';
+      }).join("");
+      currencySelect.value = currency;
+      currencySelect.addEventListener("change", function () {
+        currency = currencySelect.value;
+        saveCurrency(currency);
+        render();
+      });
     }
 
     var itemNameInputs = document.querySelectorAll(".itemname");
