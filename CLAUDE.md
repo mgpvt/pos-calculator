@@ -78,6 +78,7 @@ directly by `pos-calculator.html`'s JS (see `TAX_KEY`/`MODE_KEY`/`SHOP_KEY`/`SOU
 | `bconntech.pos.sound` | `"on"` \| `"off"` | UI click/confirm sound toggle. Defaults on. |
 | `bconntech.pos.items.recent` | JSON array, ≤10 entries `{name, unit, qty, price, discount, tax}` | Last 10 distinct item names committed to a sale (most-recent first, by name, case-insensitive). Feeds the `#itemSuggestions` datalist and exact-match autofill. |
 | `bconntech.pos.items.common` | JSON array, ≤5 entries `{name, unit, qty, price, discount, tax, count}` | Top 5 item names by usage count (independent ranking from `recent` — an old favorite stays listed even after 10 newer items have been added). Also feeds the datalist. |
+| `bconntech.pos.currency` | one of the codes in the `CURRENCIES` table, e.g. `"USD"`, `"KWD"` | Selected currency, chosen from a dropdown in the shop bar. Drives money display/entry decimal places (see §7) — not a currency *symbol*, the app still shows none. Defaults to `"USD"` if unset or invalid. |
 
 `calculator.html` (the older pocket calculator) has its own, separate keys:
 `bconntech.taxrate` (persisted tax rate) and `bconntech.sound` (click-sound toggle).
@@ -161,6 +162,16 @@ repo, not something to write down here.)
   a footer with Subtotal / Total Tax / Grand Total (the last with a thick rule above it), same
   three numbers as the on-screen Summary cards.
 - **Shop name** field under the header, saved per device, shown on every receipt/share/PDF.
+- **Currency selector** (a small dropdown in the shop bar, next to the sound toggle, visible in
+  every mode including mobile Calc-only): 15 codes (USD, EUR, GBP, INR, AED, SAR, QAR, KWD, BHD,
+  OMR, PKR, EGP, JPY, CAD, AUD), saved per device. Only changes *decimal places* actually used for
+  money — 3 for KWD/BHD/OMR, 0 for JPY, 2 for everything else — for both display (`money()`,
+  the cheque-style words' fraction, e.g. "...and 345/1000" for KWD) and entry (the keypad stops
+  accepting further decimal digits once a money field — Price, or the plain Calculator's own
+  result — has as many as the currency allows; JPY can't even start a decimal point). Qty/
+  Discount/Tax are untouched by currency and stay at plain 2dp. **No currency symbol is shown
+  anywhere** — this is decimal-precision correctness, not full currency formatting; the app's
+  existing no-symbol design (see §10, cheque-style words) is unchanged.
 - **Sound toggle** (speaker icon next to the shop name field, reachable even in mobile Calc mode)
   — synthesised key-click and a rising two-note "confirm" chime on `=`/Add to Sale.
 - **Mobile layout**: no swipe/carousel — the Sale Details screen was intentionally removed from
@@ -178,10 +189,10 @@ with a toggle.
 ## 8. Features currently being worked on
 
 **None. The session is closed with no open or half-finished work.** The last thread of work was
-the Qty unit field (`kg`/`pcs`/`box`/…, next to Item name, same autocomplete/PDF treatment — see
-§7) plus centering the PDF's Sl.no column — implemented, verified (CDP-driven smoke test plus
-desktop/mobile/print screenshots), committed, and deployed. That work also surfaced and fixed a
-latent CSS Grid overflow in the two-panel layout (see §9's "grid blowout" entry and §10).
+the per-device currency selector (15 codes, currency-correct decimal places for money display and
+entry — see §7) — implemented, verified (CDP-driven smoke test of decimal capping/the words
+fraction/JPY's blocked decimal point/persistence-across-reload, plus desktop/mobile screenshots),
+committed, and deployed.
 
 ## 9. Known bugs / limitations / things to watch
 
@@ -294,6 +305,20 @@ latent CSS Grid overflow in the two-panel layout (see §9's "grid blowout" entry
   number instead of cutting it off. `ERROR` only appears above the 8-digit ceiling.
 - **Cheque-style amount-in-words ("...and NN/100")** was chosen over a currency-specific phrasing
   (no "dollars"/"rupees") because the app has no currency symbol anywhere and shouldn't assume one.
+  Adding the currency selector didn't change this — the fraction denominator now correctly follows
+  the selected currency's decimal places (.../1000 for a 3-decimal currency), but no symbol or
+  currency name was added to the phrase itself.
+- **Currency selector changes decimal places only, never adds a symbol.** The ask was specifically
+  about "the decimal point" being correct per currency (2 vs 3 vs 0 places) — not full currency
+  formatting. Keeping the app symbol-free everywhere (as it always has been) means this feature is
+  additive/low-risk: existing receipts, the words phrase, and every screen still read exactly as
+  before for a 2-decimal currency (the default, USD), and only genuinely gain precision for
+  KWD/BHD/OMR (3dp) or lose a decimal point entirely for JPY (0dp).
+- **`entryDecimals()` distinguishes money fields (Price, the plain-Calculator result) from
+  Qty/Discount/Tax**, which stay at plain 2dp regardless of currency — qty and percentages aren't
+  money amounts, so there's no reason a 3-decimal currency should suddenly let you type "3.456" kg
+  or "8.25%" further out than before. Only fields that actually hold a currency amount follow the
+  selected currency's own precision.
 - **Serial numbers only shown once there's more than one item** — a single-item sale reads better
   without a redundant "1)".
 - **Item name is a plain `<input>`, not routed through the numeric buffer/`activeField` system**
@@ -342,8 +367,8 @@ implemented, verified, committed, and deployed:
 - `git status` is clean; `main` is pushed; GitHub Pages last build succeeded and served HTTP 200
   at the moment this was written.
 - `pos-calculator.html` and `index.html` are byte-identical.
-- The last app-code commit was **"Add a Qty unit field, center Sl.no in the PDF, fix a grid
-  overflow"** (hash `b055412` as of this writing); this `CLAUDE.md` update is committed immediately
+- The last app-code commit was **"Add a per-device currency selector with currency-correct
+  decimals"** (hash `037ef67` as of this writing); this `CLAUDE.md` update is committed immediately
   after it as a documentation-only follow-up. **Run `git log -1` for the true current HEAD — any
   hash printed in this file is a snapshot, not a promise.**
 - Repo: https://github.com/mgpvt/pos-calculator (public)
