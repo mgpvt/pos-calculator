@@ -270,7 +270,12 @@
   /* ============ Two-panel layout ============ */
   .carousel {
     display: grid;
-    grid-template-columns: 1fr 242px;
+    /* minmax(0, 1fr), not bare 1fr: a bare 1fr track can't shrink past its content's
+       automatic minimum width, so any wide-enough addition to panel-sale (e.g. the
+       unit field next to Item name) forces the whole grid past .app's own max-width,
+       which then gets sliced off by .app's overflow-x:clip. minmax(0, ...) removes
+       that floor; row__lbl's own ellipsis handles a genuinely tight column. */
+    grid-template-columns: minmax(0, 1fr) 242px;
     gap: 14px;
     align-items: stretch;   /* sale details + calculator share one height */
   }
@@ -333,10 +338,9 @@
   }
   .row--in.is-active .row__lbl { color: var(--accent); }
 
-  /* ---- Item name: full-width text entry, just below the Qty/Price/Discount/Tax buttons ---- */
-  .itemname-wrap { margin-top: 6px; }
-  .itemname {
-    width: 100%;
+  /* ---- Item name + unit: full-width text entry, just below the Qty/Price/Discount/Tax buttons ---- */
+  .itemname-wrap { display: flex; gap: 6px; margin-top: 6px; }
+  .itemname, .unitfield {
     height: 28px;
     padding: 0 9px;
     border-radius: 7px;
@@ -348,8 +352,10 @@
     font-weight: 600;
     transition: border-color 0.14s ease, background 0.14s ease;
   }
-  .itemname::placeholder { color: var(--ink-dim); font-weight: 500; }
-  .itemname:focus {
+  .itemname { flex: 1; min-width: 0; }
+  .unitfield { flex: 0 0 4.4em; width: 4.4em; padding: 0 6px; text-align: center; }
+  .itemname::placeholder, .unitfield::placeholder { color: var(--ink-dim); font-weight: 500; }
+  .itemname:focus, .unitfield:focus {
     outline: none;
     border-color: var(--c-qty);
     background: color-mix(in srgb, var(--c-qty) 9%, var(--card));
@@ -503,14 +509,14 @@
 
   /* Inside the navy calculator body, the field is a fixed light "slot" like the
      keys/LCD — not theme-aware, since the calculator body itself never goes dark. */
-  .panel-calc .itemname {
+  .panel-calc .itemname, .panel-calc .unitfield {
     background: linear-gradient(180deg, var(--num-1), var(--num-2));
     border-color: var(--num-edge);
     color: #1b2450;
     box-shadow: inset 0 1px 3px rgba(8, 14, 40, 0.18);
   }
-  .panel-calc .itemname::placeholder { color: #5b6488; }
-  .panel-calc .itemname:focus { border-color: var(--eq-2); }
+  .panel-calc .itemname::placeholder, .panel-calc .unitfield::placeholder { color: #5b6488; }
+  .panel-calc .itemname:focus, .panel-calc .unitfield:focus { border-color: var(--eq-2); }
 
   .fn {
     min-height: 30px;
@@ -922,6 +928,7 @@
     .receipt th, .receipt td { padding: 2mm 1mm; text-align: left; vertical-align: top; }
     .receipt th { border-bottom: 1px solid #000; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.08em; }
     .receipt td.num, .receipt th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .receipt td.ctr, .receipt th.ctr { text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .receipt tbody td { border-bottom: 1px solid #ddd; }
     .receipt .r-tot td { border-top: 1px solid #000; font-weight: 600; padding-top: 2.5mm; }
     .receipt .r-grand td { border-top: 3px solid #000; font-weight: 700; font-size: 12pt; padding-top: 2mm; }
@@ -990,8 +997,11 @@
 
       <div class="itemname-wrap">
         <input id="itemNameSale" class="itemname" type="text" maxlength="60"
-          placeholder="Item name (optional)" list="itemSuggestions" autocomplete="off"
-          aria-label="Item name, saved on this device for autocomplete">
+          placeholder="Item name" list="itemSuggestions" autocomplete="off"
+          aria-label="Item name (optional), saved on this device for autocomplete">
+        <input id="unitSale" class="unitfield" type="text" maxlength="12"
+          placeholder="unit" list="unitSuggestions" autocomplete="off"
+          aria-label="Qty unit, e.g. kg, pcs, box">
       </div>
 
       <div class="rows rows--out">
@@ -1033,8 +1043,11 @@
 
         <div class="itemname-wrap">
           <input id="itemNameCalc" class="itemname" type="text" maxlength="60"
-            placeholder="Item name (optional)" list="itemSuggestions" autocomplete="off"
-            aria-label="Item name, saved on this device for autocomplete">
+            placeholder="Item name" list="itemSuggestions" autocomplete="off"
+            aria-label="Item name (optional), saved on this device for autocomplete">
+          <input id="unitCalc" class="unitfield" type="text" maxlength="12"
+            placeholder="unit" list="unitSuggestions" autocomplete="off"
+            aria-label="Qty unit, e.g. kg, pcs, box">
         </div>
 
         <div class="ctrlrow">
@@ -1105,6 +1118,11 @@
 </div>
 
 <datalist id="itemSuggestions"></datalist>
+<datalist id="unitSuggestions">
+  <option value="pcs"><option value="kg"><option value="g"><option value="ltr">
+  <option value="ml"><option value="box"><option value="dozen"><option value="pack">
+  <option value="m"><option value="ft"><option value="set"><option value="bag">
+</datalist>
 <div class="receipt" id="receipt" aria-hidden="true"></div>
 
 <script>
@@ -1232,7 +1250,7 @@
     function rememberItem(L) {
       var name = (L.name || "").trim().slice(0, 60);
       if (!name) return;
-      var rec = { name: name, qty: L.qty, price: L.price, discount: L.discount, tax: L.tax };
+      var rec = { name: name, unit: L.unit, qty: L.qty, price: L.price, discount: L.discount, tax: L.tax };
 
       var recent = readItemList(ITEMS_RECENT_KEY).filter(function (it) { return !sameName(it.name, name); });
       recent.unshift(rec);
@@ -1244,10 +1262,10 @@
       common.forEach(function (it) { if (sameName(it.name, name)) existing = it; });
       if (existing) {
         existing.count = (existing.count || 1) + 1;
-        existing.qty = rec.qty; existing.price = rec.price;
+        existing.unit = rec.unit; existing.qty = rec.qty; existing.price = rec.price;
         existing.discount = rec.discount; existing.tax = rec.tax;
       } else {
-        common.push({ name: rec.name, qty: rec.qty, price: rec.price, discount: rec.discount, tax: rec.tax, count: 1 });
+        common.push({ name: rec.name, unit: rec.unit, qty: rec.qty, price: rec.price, discount: rec.discount, tax: rec.tax, count: 1 });
       }
       common.sort(function (a, b) { return (b.count || 0) - (a.count || 0); });
       if (common.length > ITEMS_COMMON_MAX) common.length = ITEMS_COMMON_MAX;
@@ -1286,7 +1304,7 @@
       calc:     { label: "",         suffix: "" }
     };
 
-    var line = { name: "", qty: 1, price: 0, discount: 0, tax: readTax(), calc: 0 };
+    var line = { name: "", unit: "", qty: 1, price: 0, discount: 0, tax: readTax(), calc: 0 };
     var sale = [];
     var editIndex = null;                 // index of the sale item being edited, or null
     var mode = readMode();                // stored preference: "calc" | "sales"
@@ -1376,6 +1394,7 @@
     }
     function buildLine(src) {
       var name = (src.name || "").trim();
+      var unit = (src.unit || "").trim();
       var qty = +src.qty || 0, price = +src.price || 0;
       var discount = +src.discount || 0, tax = +src.tax || 0;
       var subtotal = qty * price;
@@ -1384,13 +1403,13 @@
       var taxAmt = discounted * tax / 100;
       var total = discounted + taxAmt;
       return {
-        name: name, qty: qty, price: price, discount: discount, tax: tax,
+        name: name, unit: unit, qty: qty, price: price, discount: discount, tax: tax,
         subtotal: subtotal, discountAmt: discountAmt,
         discounted: discounted, taxAmt: taxAmt, total: total
       };
     }
     function effectiveLine() {
-      var L = { name: line.name, qty: line.qty, price: line.price, discount: line.discount, tax: line.tax };
+      var L = { name: line.name, unit: line.unit, qty: line.qty, price: line.price, discount: line.discount, tax: line.tax };
       if (buffer !== "" && activeField !== "calc") {
         var v = parseFloat(buffer);
         if (isFinite(v)) L[activeField] = v;
@@ -1511,7 +1530,7 @@
       hintTimer = setTimeout(function () { el.textContent = ""; }, 2600);
     }
     function resetLine() {
-      line.name = ""; line.qty = 1; line.price = 0;
+      line.name = ""; line.unit = ""; line.qty = 1; line.price = 0;
       buffer = ""; pendingOp = null; awaitingOperand = false; justEvaluated = false;
       activeField = "qty";
     }
@@ -1615,7 +1634,7 @@
       var it = sale[i];
       if (!it || emode() === "calc") return;
       editIndex = i;
-      line.name = it.name || ""; line.qty = it.qty; line.price = it.price;
+      line.name = it.name || ""; line.unit = it.unit || ""; line.qty = it.qty; line.price = it.price;
       line.discount = it.discount; line.tax = it.tax;
       activeField = "qty";
       buffer = ""; pendingOp = null; awaitingOperand = false; justEvaluated = false;
@@ -1644,7 +1663,7 @@
     function allClear() {
       sale = [];
       editIndex = null;
-      line = { name: "", qty: 1, price: 0, discount: 0, tax: readTax(), calc: 0 };
+      line = { name: "", unit: "", qty: 1, price: 0, discount: 0, tax: readTax(), calc: 0 };
       activeField = emode() === "calc" ? "calc" : "qty";
       buffer = ""; pendingOp = null; awaitingOperand = false; justEvaluated = false;
       render();
@@ -1674,9 +1693,11 @@
     /* ---------- Rendering ---------- */
 
     function fieldText(f) {
-      if (f === activeField && buffer !== "") return buffer + FIELDS[f].suffix;
+      var suffix = FIELDS[f].suffix;
+      if (f === "qty" && line.unit) suffix = " " + line.unit + suffix;
+      if (f === activeField && buffer !== "") return buffer + suffix;
       if (f === "price") return money(line.price);
-      return trim(line[f]) + FIELDS[f].suffix;
+      return trim(line[f]) + suffix;
     }
     function setLcd(el, text) {
       if (!el) return;
@@ -1694,6 +1715,9 @@
 
       document.querySelectorAll(".itemname").forEach(function (el) {
         if (document.activeElement !== el) el.value = line.name;
+      });
+      document.querySelectorAll(".unitfield").forEach(function (el) {
+        if (document.activeElement !== el) el.value = line.unit;
       });
 
       $("#saleH").textContent = editing ? ("Edit Item " + (editIndex + 1)) : "Sale Details";
@@ -1764,7 +1788,7 @@
         role("entryLabel").textContent = "Entry " + MIDDOT + " " + FIELDS[activeField].label;
         role("totalLabel").textContent = "Total";
         role("d-echo").textContent =
-          trim(eff.qty) + " " + TIMES + " " + money(eff.price) +
+          trim(eff.qty) + (eff.unit ? " " + eff.unit : "") + " " + TIMES + " " + money(eff.price) +
           " " + MINUS + " " + trim(eff.discount) + "% + " + trim(eff.tax) + "%";
       } else {
         var shown = buffer !== "" ? buffer : trim(line.calc);
@@ -1797,7 +1821,7 @@
         var nm = it.name ? '<span class="li__name">' + escapeHtml(it.name) + '</span>' : "";
         return '' +
           '<div class="' + cls + '" data-i="' + i + '" tabindex="0" aria-label="Edit item ' + (i + 1) + '" title="Tap to edit">' +
-            '<span class="li__desc">' + sn + nm + trim(it.qty) + ' ' + TIMES + ' ' + money(it.price) + sub + '</span>' +
+            '<span class="li__desc">' + sn + nm + trim(it.qty) + (it.unit ? ' ' + escapeHtml(it.unit) : '') + ' ' + TIMES + ' ' + money(it.price) + sub + '</span>' +
             '<span class="li__sub" title="Subtotal">' + money(it.subtotal) + '</span>' +
             '<span class="li__tax" title="Tax amount">' + money(it.taxAmt) + '</span>' +
             '<span class="li__total" title="Line total">' + money(it.total) + '</span>' +
@@ -1832,7 +1856,7 @@
         if (it.tax) tags.push("+" + trim(it.tax) + "% tax");
         var prefix = numbered ? (i + 1) + ") " : "";
         if (it.name) { L.push(prefix + it.name); prefix = "   "; }
-        L.push(prefix + trim(it.qty) + " " + TIMES + " " + money(it.price) +
+        L.push(prefix + trim(it.qty) + (it.unit ? " " + it.unit : "") + " " + TIMES + " " + money(it.price) +
           (tags.length ? " (" + tags.join(" " + MIDDOT + " ") + ")" : ""));
         L.push("   Subtotal " + money(it.subtotal) + " " + MIDDOT +
           " Tax " + money(it.taxAmt) + " " + MIDDOT + " Total " + money(it.total));
@@ -1850,9 +1874,9 @@
       var s = saleSums();
       var rows = sale.map(function (it, i) {
         return "<tr>" +
-          "<td class='num'>" + (i + 1) + "</td>" +
+          "<td class='ctr'>" + (i + 1) + "</td>" +
           "<td>" + (it.name ? escapeHtml(it.name) : "&mdash;") + "</td>" +
-          "<td class='num'>" + trim(it.qty) + "</td>" +
+          "<td class='num'>" + trim(it.qty) + (it.unit ? " " + escapeHtml(it.unit) : "") + "</td>" +
           "<td class='num'>" + money(it.price) + "</td>" +
           "<td class='num'>" + (it.discount ? trim(it.discount) + "%" : "&mdash;") + "</td>" +
           "<td class='num'>" + (it.tax ? trim(it.tax) + "%" : "&mdash;") + "</td>" +
@@ -1863,7 +1887,7 @@
         "<h1>" + escapeHtml(shopTitle()) + "</h1>" +
         "<p class='r-meta'>Sale Receipt &middot; " + escapeHtml(fmtWhen()) + "</p>" +
         "<table><thead><tr>" +
-          "<th>Sl.no</th><th>Item name</th><th class='num'>Qty</th><th class='num'>Unit Price</th>" +
+          "<th class='ctr'>Sl.no</th><th>Item name</th><th class='num'>Qty</th><th class='num'>Unit Price</th>" +
           "<th class='num'>Discount</th><th class='num'>Tax</th><th class='num'>Total</th>" +
         "</tr></thead>" +
         "<tbody>" + rows + "</tbody><tfoot>" +
@@ -1968,6 +1992,7 @@
         });
         var match = findSavedItem(el.value);
         if (match) {
+          line.unit = match.unit || "";
           line.qty = +match.qty || line.qty;
           line.price = +match.price || 0;
           line.discount = +match.discount || 0;
@@ -1975,6 +2000,16 @@
           buffer = ""; pendingOp = null; awaitingOperand = false; justEvaluated = false;
           render();
         }
+      });
+    });
+
+    var unitInputs = document.querySelectorAll(".unitfield");
+    unitInputs.forEach(function (el) {
+      el.addEventListener("input", function () {
+        line.unit = el.value;
+        unitInputs.forEach(function (other) {
+          if (other !== el) other.value = line.unit;
+        });
       });
     });
 
