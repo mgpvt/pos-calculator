@@ -1,10 +1,11 @@
 # bconnTech Calculator — Project Notes
 
 **Session closed 2026-09-07.** Working tree is clean; everything in this file is committed and
-pushed to `main` (HEAD `4378589` at close — run `git log -1` for the true current HEAD), and
-GitHub Pages is serving the current code (status "built", HTTP 200, live file verified to contain
-the latest change). A fresh Claude Code session should be able to pick up entirely from this file
-— no prior conversation needed.
+pushed to `main` (last app-code commit `2e052e7`; this doc-finalization commit is the last on the
+branch — run `git log -1` for the true current HEAD, any hash here is a snapshot). GitHub Pages is
+serving the current code (status "built", HTTP 200, live file `curl`-verified to contain the last
+change). A fresh Claude Code session should be able to pick up entirely from this file — no prior
+conversation needed.
 
 ## 1. Project purpose & architecture
 
@@ -614,8 +615,9 @@ implemented, verified, committed, and deployed:
   last change ("dedicated Unit Price readout").
 - `pos-calculator.html` and `index.html` are byte-identical (`diff -q` clean).
 - The last app-code commit was **"Make the left LCD a dedicated Unit Price readout"** (hash
-  `2e052e7`), followed by two doc-only commits (`4378589` = HEAD at close). **Run `git log -1` for
-  the true current HEAD — any hash printed in this file is a snapshot, not a promise.**
+  `2e052e7`), followed by doc-only commits (the last being this finalization pass). **Run
+  `git log -1` for the true current HEAD — any hash printed in this file is a snapshot, not a
+  promise.**
 - This session's five pieces of work are listed newest-first in §8; the design reasoning for the
   bigger ones is in §10 (Unit Price LCD, per-item discount type, Overall Discount as an amount).
 - Repo: https://github.com/mgpvt/pos-calculator (public)
