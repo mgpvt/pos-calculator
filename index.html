@@ -1986,13 +1986,13 @@
 
         saveTax(line.tax);
 
-        setLcd(role("d-entry"), fieldText(activeField));
+        // The left LCD is a dedicated Unit Price readout: it always shows the price, never the
+        // qty/discount/tax values (those live on their own quick-jump buttons). Typing into Price
+        // still updates it live via fieldText("price"); editing another field leaves it on the
+        // committed price.
+        setLcd(role("d-entry"), fieldText("price"));
         setLcd(role("d-total"), money8(eff.total));
-        // The left LCD is where the price is keyed in the common case (qty defaults to 1), so its
-        // label reads "Unit price" for the Qty/Price fields; Discount/Tax keep their own names.
-        role("entryLabel").textContent = (activeField === "qty" || activeField === "price")
-          ? "Unit price"
-          : "Entry " + MIDDOT + " " + FIELDS[activeField].label;
+        role("entryLabel").textContent = "Unit price";
         // The symbol goes on the label, not the digits themselves — the LCD's tiered
         // font-shrinking already exists to keep an 8-digit number from overflowing, so a
         // prefix glued onto the value would only make that worse.
