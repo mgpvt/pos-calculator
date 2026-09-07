@@ -159,7 +159,9 @@ repo, not something to write down here.)
   printed/PDF receipt table (see below).
 - **Calculator**: twin LCD (Entry/Input on the left, Total/Result on the right, both auto-shrink
   font size in three tiers so an 8-digit number never overflows or truncates), a Qty/Price/
-  Discount/Tax quick-jump row, CE/⌫/±/% controls, and a 4×4 keypad (`7 8 9 ÷ …`). Values are capped
+  Discount/Tax quick-jump row, CE/⌫/±/% controls, and a 4×4 keypad (`7 8 9 ÷ …`). The left LCD's
+  label tracks the active quick-jump field — "Entry · QTY / DISCOUNT / TAX", but "Unit price" (not
+  "Entry · PRICE") for the Price field, since that reads more naturally to a shop. Values are capped
   at 8 digits (`MAX_VALUE = 99999999`); anything larger displays `ERROR`, and a red banner just
   below the calculator (`#calcErr`, both modes, both panels) explains why ("amount exceeds the
   maximum this calculator supports (99,999,999)"), clearing again once the values are fixed —

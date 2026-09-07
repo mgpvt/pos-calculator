@@ -394,7 +394,7 @@
     color: var(--ink-dim);
     font-family: inherit;
     font-size: 0.72rem;
-    font-weight: 700;
+    font-weight: 500;
     cursor: pointer;
     transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
   }
@@ -402,6 +402,7 @@
     border-color: var(--c-discount);
     background: color-mix(in srgb, var(--c-discount) 12%, var(--card));
     color: var(--c-discount);
+    font-weight: 700;
   }
   .disctype__opt:focus-visible { outline: 2px solid var(--c-discount); outline-offset: 2px; }
 
@@ -1987,7 +1988,9 @@
 
         setLcd(role("d-entry"), fieldText(activeField));
         setLcd(role("d-total"), money8(eff.total));
-        role("entryLabel").textContent = "Entry " + MIDDOT + " " + FIELDS[activeField].label;
+        role("entryLabel").textContent = activeField === "price"
+          ? "Unit price"
+          : "Entry " + MIDDOT + " " + FIELDS[activeField].label;
         // The symbol goes on the label, not the digits themselves — the LCD's tiered
         // font-shrinking already exists to keep an 8-digit number from overflowing, so a
         // prefix glued onto the value would only make that worse.
