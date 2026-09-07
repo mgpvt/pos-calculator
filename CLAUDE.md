@@ -1,8 +1,10 @@
 # bconnTech Calculator — Project Notes
 
-**Session closed 2026-09-06.** Working tree is clean; everything in this file is committed and
-pushed to `main`, and GitHub Pages is serving the current code. A fresh Claude Code session should
-be able to pick up entirely from this file — no prior conversation needed.
+**Session closed 2026-09-07.** Working tree is clean; everything in this file is committed and
+pushed to `main` (HEAD `4378589` at close — run `git log -1` for the true current HEAD), and
+GitHub Pages is serving the current code (status "built", HTTP 200, live file verified to contain
+the latest change). A fresh Claude Code session should be able to pick up entirely from this file
+— no prior conversation needed.
 
 ## 1. Project purpose & architecture
 
@@ -63,7 +65,7 @@ file is the simplest thing that satisfies "runs everywhere, no install."
 | `index.html` | **Byte-for-byte mirror** of `pos-calculator.html`, so GitHub Pages (which serves `index.html` at the repo root) shows the app at `/`. **Must be manually re-copied after every edit to `pos-calculator.html`** — see §9 and §12. |
 | `calculator.html` | The earlier standalone pocket/business calculator. Independent of the two files above; not part of the active feature work. |
 | `bconntech_logo.png` | Source logo (412 KB, 160×160-ish app-icon style: navy rounded square, glowing node/triangle graphic). Kept in the repo for reference, but **not** what's actually embedded in the pages — see the gotcha in §9. |
-| `README.md` | Short public-facing description + the live link, shown on GitHub. Kept in sync with actual behavior (last corrected alongside this file). |
+| `README.md` | Short public-facing description + the live link, shown on GitHub. Rewritten 2026-09-07 to cover the current feature set (item discount type, item names/units, overall discount, currency, PDF/share, sounds) and to stop claiming "dependency-free" (jsPDF is a CDN dependency). |
 | `CLAUDE.md` | This file. |
 
 There is no `src/`, no build output, no config files (no `.env`, no `package.json`, no CI config).
@@ -157,9 +159,10 @@ repo, not something to write down here.)
   line in the Current Sale list, its own line in the plain-text/WhatsApp/Email receipt (unnamed
   items keep the original compact single-line format), and its own **Item name** column in the
   printed/PDF receipt table (see below).
-- **Calculator**: twin LCD (Entry/Input on the left, Total/Result on the right, both auto-shrink
-  font size in three tiers so an 8-digit number never overflows or truncates), a Qty/Price/
-  Discount/Tax quick-jump row, CE/⌫/±/% controls, and a 4×4 keypad (`7 8 9 ÷ …`). In Sales mode the
+- **Calculator**: twin LCD (in Sales mode: Unit Price on the left, running line Total on the right;
+  in bare Calc mode: Input / Result — both auto-shrink font size in three tiers so an 8-digit
+  number never overflows or truncates), a Qty/Price/Discount/Tax quick-jump row, CE/⌫/±/% controls,
+  and a 4×4 keypad (`7 8 9 ÷ …`). In Sales mode the
   **left LCD is a dedicated Unit Price readout** — fixed label **"Unit price"**, and it always
   shows the price (`fieldText("price")`: live while Price is being typed, the committed
   `line.price` otherwise), never the qty/discount/tax value. Those three fields still edit via
@@ -184,9 +187,10 @@ repo, not something to write down here.)
   more on phones (`narrowMq.matches`: 2.3× base font / 1.7× pop / settles at 0.7×) than on desktop
   (1.6× / 1.4× / 0.55×) so it reads at arm's length. Skips the animation under
   `prefers-reduced-motion`.
-- **Current Sale list**: each line shows `n) qty × price (−disc% · +tax%)` plus **Subtotal / Tax /
-  Total** in their own aligned columns under a sticky column header (stays aligned even when the
-  list scrolls, via `scrollbar-gutter: stable`). Serial numbers (`1)`, `2)`, …) only appear once
+- **Current Sale list**: each line shows `n) qty × price (−discount · +tax%)` — the discount tag
+  is a rate (`−10%`) or, for an `"amt"`-type item discount, the money taken off (`−$5.00`), via the
+  shared `discTag()` helper — plus **Subtotal / Tax / Total** in their own aligned columns under a
+  sticky column header (stays aligned even when the list scrolls, via `scrollbar-gutter: stable`). Serial numbers (`1)`, `2)`, …) only appear once
   there's more than one item. Tapping a row loads it back into the fields for editing — the Add
   button becomes **Update Item**, with a Cancel option (a `Cancel` button on desktop, an "Editing
   #N · cancel" pill next to "Current Sale" on mobile, since the ledger itself is hidden there).
@@ -231,9 +235,10 @@ repo, not something to write down here.)
   OMR, PKR, EGP, JPY, CAD, AUD), saved per device. Decimal places actually used for money follow it
   — 3 for KWD/BHD/OMR, 0 for JPY, 2 for everything else — for both display (`money()`, the
   cheque-style words' fraction, e.g. "...and 345/1000" for KWD) and entry (the keypad stops
-  accepting further decimal digits once a money field — Price, or the plain Calculator's own
-  result — has as many as the currency allows; JPY can't even start a decimal point). Qty/
-  Discount/Tax are untouched by currency and stay at plain 2dp.
+  accepting further decimal digits once a money field — Price, the plain Calculator's own result,
+  or a flat-`"amt"` item Discount — has as many as the currency allows; JPY can't even start a
+  decimal point). Qty, a percentage Discount, and Tax are untouched by currency and stay at plain
+  2dp.
 - **Currency symbol shown wherever there's room, on-screen and in the plain-text receipt**
   (`withSymbol()`): a real glyph for USD/EUR/GBP/JPY/INR/PKR/CAD/AUD ($ € £ ¥ ₹ ₨ — CAD/AUD both
   use `$`, same as USD), the plain code as a stand-in for the rest (`AED 100.00`, no single
@@ -258,25 +263,43 @@ with a toggle.
 
 ## 8. Features currently being worked on
 
-**None. The session is closed with no open or half-finished work.** The last thread of work was
-adding a **per-item discount type toggle** (`% / Amount`, `line.discountType` = `"pct"` | `"amt"`)
-so the shop can enter an item's Discount either as a rate or as a flat money amount with no
-percentage maths. `buildLine()` branches on the type and clamps an `"amt"` discount to the line
-subtotal; `fieldText()`/`entryDecimals()` show and accept an `"amt"` discount as money; a new
-`discTag()` helper feeds both the Current Sale list and the text receipt; the PDF's Discount column
-prints the rate or the plain amount; the type is stored per saved item (schema in §4), restored on
-edit, and reset to `"pct"` by **AC**. The `.disctype` control sits below the Item name/Unit row in
-both panels and is hidden in bare-Calc mode like that row. Verified via CDP: `10%` on a $100 line →
-−$10.00 / $90.00; switching to Amount and entering `7` → flat −$7.00 / $93.00; `500` as an amount
-clamping to −$100.00 / $0.00; the Current Sale list showing `−$8.00`; editing a saved line
-restoring the toggle to Amount; a two-item PDF showing "10%" on one row and "15.00" on the other
-with correct Totals/Grand Total; **AC** back to `%`. The whole-sale Overall Discount was left
-exactly as it was (already a flat entered amount). Before that: changing that Overall Discount from
-a percentage to a flat hand-entered money amount (`overallDiscount` holds a currency amount;
-`saleSums()` clamps it to the sale's pre-discount total; the row shows a currency prefix label in
-place of "%"; "(N%)" dropped from the PDF row and text receipt). Before that: centering the PDF's
-Qty/Discount/Tax columns to their headers, and the original percentage version of the Overall
-Discount feature. Before that: narrowing the PDF's currency display after feedback
+**None. The session is closed with no open or half-finished work.** This session's work, most
+recent first:
+
+1. **Left LCD → dedicated Unit Price readout.** In Sales mode the big left LCD now always shows
+   the price (`setLcd(role("d-entry"), fieldText("price"))` — live while Price is being typed, the
+   committed `line.price` otherwise) under a fixed **"Unit price"** label, instead of switching to
+   the qty/discount/tax value when one of those quick-jump buttons is active. Those fields still
+   edit normally; their live values show on their own buttons and in the echo line. Reached in
+   three steps as the ask got clearer: relabel Price's LCD → also relabel the default (Qty) view →
+   pin the LCD's value to the price entirely. Bare Calc mode's left LCD is untouched ("Input").
+   Verified via CDP: keying Qty `5`, Price `12.50`, Discount `10`, Tax `8` in turn — the left LCD
+   read `0.00 → 0.00 → 12.50 → 12.50 → 12.50` throughout, label "UNIT PRICE" the whole time; the
+   quick-jump buttons and echo line tracked each field.
+2. **Discount-type buttons lightened** — the inactive `% / Amount` options render at `font-weight:
+   500`, the selected one at `700` (plus its colour) so it still stands out.
+3. **Per-item discount type toggle** (`% / Amount`, `line.discountType` = `"pct"` | `"amt"`) so an
+   item's Discount can be a rate or a flat money amount with no percentage maths. `buildLine()`
+   branches on the type and clamps an `"amt"` discount to the line subtotal; `fieldText()` /
+   `entryDecimals()` show and accept an `"amt"` discount as money; `discTag()` feeds the Current
+   Sale list and text receipt; the PDF's Discount column prints the rate or the plain amount; the
+   type is stored per saved item (schema in §4), restored on edit, reset to `"pct"` by **AC**. The
+   `.disctype` control sits below the Item name/Unit row in both panels, hidden in bare-Calc mode.
+   Verified via CDP: `10%` on a $100 line → −$10.00 / $90.00; Amount `7` → flat −$7.00 / $93.00;
+   `500` as an amount clamping to −$100.00 / $0.00; list showing `−$8.00`; edit restoring the
+   toggle; a two-item PDF showing "10%" and "15.00" with correct Totals/Grand Total; **AC** → `%`.
+4. **Overall Discount → flat hand-entered money amount** (was a 0-100 percentage). `overallDiscount`
+   holds a currency amount; `saleSums()` clamps it to the sale's pre-discount total (can't go
+   negative); the row shows a currency prefix label in place of "%"; the `overallDiscAmt` span
+   shows only when the clamp bit; "(N%)" dropped from the PDF row and the text receipt. Verified:
+   `30` on a $100 subtotal → $70 grand total on-screen / words / PDF; `250` clamping to $100.
+5. **`(none)` sentinel option** at the top of `#unitSuggestions` — picking it sets `line.unit = ""`
+   from the dropdown (the only clear gesture on mobile, where the focus-clears / blur-restores unit
+   field otherwise has no way back to blank).
+
+Earlier context (before this session): centering the PDF's Qty/Discount/Tax columns to their
+headers, and the original percentage version of the Overall Discount feature. Before that:
+narrowing the PDF's currency display after feedback
 that showing it on every item row was noisy —
 it now only appears on the Subtotal/Total column headings ("Subtotal (INR)") and the Grand Total
 value ("INR 92.70"); item rows and the Totals row are plain numbers, and the now-dead
@@ -408,6 +431,10 @@ staying on `window.print()` — see §10.
   content produces a similarly cropped-looking screenshot, check `.panel-calc`'s
   `getBoundingClientRect().right` against `.app`'s — if the former exceeds the latter, this is the
   bug, and the fix is always `minmax(0, ...)`, never a bigger `.app` max-width or removing the clip.
+  The `.disctype` row (`% / Amount` toggle) added later is another nested flex row in that panel —
+  it was checked (`.panel-calc` right edge vs `.app`, plus desktop + 390px screenshots) and does
+  *not* overflow, but it's the same shape of risk, so re-check it if the panel's width behaviour
+  ever looks off.
 - **Possible pre-existing cosmetic issue, not yet confirmed or fixed:** a 390px-wide mobile
   screenshot taken this session showed the Current Sale list's sticky column header rendering
   "SUBTOTALTAX" with no gap between the two words (`.salelist__cols` in the CSS). Not touched or
@@ -447,6 +474,15 @@ staying on `window.print()` — see §10.
 - **8-digit cap with tiered LCD shrinking instead of ellipsis.** A calculator that truncates its own
   numbers is unacceptable — so amounts step down through three font sizes to always show the whole
   number instead of cutting it off. `ERROR` only appears above the 8-digit ceiling.
+- **In Sales mode the left LCD is pinned to the Unit Price, not the active quick-jump field.** The
+  shop owner asked for this in three passes (relabel the Price view → relabel the default Qty view
+  → stop it showing qty/discount/tax values at all). The reasoning that stuck: the left LCD is a
+  big at-arm's-length readout, and the price is the number that actually matters to see while
+  ringing up a sale; qty defaults to 1, and discount/tax are secondary and already legible on
+  their own quick-jump buttons and in the echo line. So `render()` feeds it `fieldText("price")`
+  unconditionally (still live while Price is the active field, thanks to `fieldText`'s own
+  buffer check) with a fixed "Unit price" label. Editing qty/discount/tax still works — those
+  fields just don't take over the big display. Bare Calc mode keeps the generic Input/Result LCD.
 - **Cheque-style amount-in-words ("...and NN/100")** was chosen over a currency-specific phrasing
   (no "dollars"/"rupees") because the app originally had no currency symbol anywhere and shouldn't
   assume one. That changed once symbols were added (below) — the words line now ends with a
@@ -528,8 +564,8 @@ staying on `window.print()` — see §10.
   rest" only fires once what's typed matches a saved item's name exactly (typing further past a
   match, e.g. continuing to type after a match, simply stops re-triggering it) — picking a
   `<datalist>` suggestion produces the same exact-match `input` event, so it works both ways.
-  Qty *and* price/discount/tax are all overwritten from the saved record on a match, since the ask
-  was explicitly to "fill the rest," not just the price.
+  Qty *and* price/discount/discount-type/tax are all overwritten from the saved record on a match,
+  since the ask was explicitly to "fill the rest," not just the price.
 - **Two separate localStorage lists (`recent`, capped 10; `common`, capped 5) rather than one**,
   matching the user's own wording — an item used often in the past but not recently would fall out
   of a single MRU-only list; keeping a frequency-ranked list alongside it means an old favorite
@@ -573,31 +609,33 @@ staying on `window.print()` — see §10.
 **The session is being closed intentionally, at a clean stopping point.** All requested work is
 implemented, verified, committed, and deployed:
 
-- `git status` is clean; `main` is pushed; GitHub Pages last build succeeded and served HTTP 200
-  at the moment this was written.
-- `pos-calculator.html` and `index.html` are byte-identical.
-- The last app-code commit was **"Center Qty/Discount/Tax in the PDF; add an overall sale
-  discount"** (hash `ed7911d` as of this writing); this `CLAUDE.md` update is committed immediately
-  after it as a documentation-only follow-up. **Run `git log -1` for the true current HEAD — any
-  hash printed in this file is a snapshot, not a promise.**
+- `git status` is clean; `main` == `origin/main` (0 ahead / 0 behind); GitHub Pages status
+  `"built"` and served HTTP 200, and the live file was `curl`-checked to contain this session's
+  last change ("dedicated Unit Price readout").
+- `pos-calculator.html` and `index.html` are byte-identical (`diff -q` clean).
+- The last app-code commit was **"Make the left LCD a dedicated Unit Price readout"** (hash
+  `2e052e7`), followed by two doc-only commits (`4378589` = HEAD at close). **Run `git log -1` for
+  the true current HEAD — any hash printed in this file is a snapshot, not a promise.**
+- This session's five pieces of work are listed newest-first in §8; the design reasoning for the
+  bigger ones is in §10 (Unit Price LCD, per-item discount type, Overall Discount as an amount).
 - Repo: https://github.com/mgpvt/pos-calculator (public)
 - Live site: https://mgpvt.github.io/pos-calculator/
 - Claude Artifact for `pos-calculator.html` (private preview):
-  `https://claude.ai/code/artifact/b8ac173a-8651-44e9-a270-ee020f901148` — **not republished this
-  session**, so it no longer reflects the Item Name feature above; it still shows whatever was last
-  published there. Republish with that same `url` (see §12 step 5) if the user wants the Artifact
-  preview current too. There is a second, similarly-titled artifact for the other file; see the
-  disambiguation note in §9 before republishing either.
+  `https://claude.ai/code/artifact/b8ac173a-8651-44e9-a270-ee020f901148` — **not republished for
+  several sessions**, so it is well behind `main` (no Item Name, no currency work, no discount
+  work, no Unit Price LCD). Republish with that same `url` (see §12 step 5) if the user wants the
+  Artifact preview current. There is a second, similarly-titled artifact for the other file; see
+  the disambiguation note in §9 before republishing either.
 
 **No open questions are pending from the user.** There is nothing mid-flight to resume — the next
 session starts fresh on whatever the user asks for next.
 
 ## 12. Next steps to do after starting a fresh session
 
-1. Re-read this file, then skim `pos-calculator.html` top-to-bottom once (it's ~1,900 lines but all
-   in one place) before making changes — the whole app is state + render functions in one IIFE, so
-   it's more useful to understand the flow (`render()`, `renderList()`, `applyMode()`,
-   `addToSale()`, `flyResultToList()`) than to jump straight to a line number.
+1. Re-read this file, then skim `pos-calculator.html` top-to-bottom once (~2,440 lines, all in one
+   place) before making changes — the whole app is state + render functions in one IIFE, so it's
+   more useful to understand the flow (`render()`, `renderList()`, `applyMode()`, `addToSale()`,
+   `buildLine()`, `saleSums()`, `flyResultToList()`) than to jump straight to a line number.
 2. If the user reports a new bug or asks for a change: edit `pos-calculator.html` only, then
    **`cp pos-calculator.html index.html`** before committing (see §9's sync gotcha).
 3. Verify changes visually before shipping — there's no test suite, so use headless Chrome
@@ -608,7 +646,9 @@ session starts fresh on whatever the user asks for next.
 4. Commit with a descriptive message (`Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`
    trailer per this repo's convention), `git push origin main`, then poll
    `gh api repos/mgpvt/pos-calculator/pages` until `"status":"built"` before telling the user it's
-   live.
+   live. Pages occasionally flaps to `"errored"` for a poll or two before settling on `"built"` —
+   if it does, keep polling and also `curl -s <live URL> | grep <a string from your change>` to
+   confirm the deploy actually landed rather than trusting the status alone.
 5. If updating the Claude Artifact too: republish with the same `file_path` (or pass the existing
    `url`) so it updates in place rather than creating a new artifact — and double-check you're
    passing the `pos-calculator.html` artifact's URL, not the pocket calculator's (see §9).
