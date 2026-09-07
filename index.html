@@ -1988,7 +1988,9 @@
 
         setLcd(role("d-entry"), fieldText(activeField));
         setLcd(role("d-total"), money8(eff.total));
-        role("entryLabel").textContent = activeField === "price"
+        // The left LCD is where the price is keyed in the common case (qty defaults to 1), so its
+        // label reads "Unit price" for the Qty/Price fields; Discount/Tax keep their own names.
+        role("entryLabel").textContent = (activeField === "qty" || activeField === "price")
           ? "Unit price"
           : "Entry " + MIDDOT + " " + FIELDS[activeField].label;
         // The symbol goes on the label, not the digits themselves — the LCD's tiered
