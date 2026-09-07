@@ -80,8 +80,8 @@ directly by `pos-calculator.html`'s JS (see `TAX_KEY`/`MODE_KEY`/`SHOP_KEY`/`SOU
 | `bconntech.pos.mode` | `"calc"` \| `"sales"` | User's mode preference. Only visibly matters on mobile (≤760px) — see §10. Defaults to `"calc"`. |
 | `bconntech.pos.shop` | string, ≤42 chars | Shop name, editable any time in the bar under the header. Printed on the PDF receipt heading and prefixed to shared text/email subject. Defaults to empty → displays as "bconnTech". |
 | `bconntech.pos.sound` | `"on"` \| `"off"` | UI click/confirm sound toggle. Defaults on. |
-| `bconntech.pos.items.recent` | JSON array, ≤10 entries `{name, unit, qty, price, discount, tax}` | Last 10 distinct item names committed to a sale (most-recent first, by name, case-insensitive). Feeds the `#itemSuggestions` datalist and exact-match autofill. |
-| `bconntech.pos.items.common` | JSON array, ≤5 entries `{name, unit, qty, price, discount, tax, count}` | Top 5 item names by usage count (independent ranking from `recent` — an old favorite stays listed even after 10 newer items have been added). Also feeds the datalist. |
+| `bconntech.pos.items.recent` | JSON array, ≤10 entries `{name, unit, qty, price, discount, discountType, tax}` | Last 10 distinct item names committed to a sale (most-recent first, by name, case-insensitive). Feeds the `#itemSuggestions` datalist and exact-match autofill. `discountType` is `"pct"` \| `"amt"` (missing → `"pct"` for records saved before that field existed). |
+| `bconntech.pos.items.common` | JSON array, ≤5 entries `{name, unit, qty, price, discount, discountType, tax, count}` | Top 5 item names by usage count (independent ranking from `recent` — an old favorite stays listed even after 10 newer items have been added). Also feeds the datalist. |
 | `bconntech.pos.currency` | one of the codes in the `CURRENCIES` table, e.g. `"USD"`, `"KWD"` | Selected currency, chosen from a dropdown in the shop bar. Drives money display/entry decimal places and which symbol/code is shown (see §7). Defaults to `"USD"` if unset or invalid. |
 
 `calculator.html` (the older pocket calculator) has its own, separate keys:
@@ -123,17 +123,27 @@ repo, not something to write down here.)
 - Two modes: **Calc** (bare calculator) and **Sales** (full register), switchable via a header
   toggle. On desktop (>760px) both the Sale Details ledger and the Calculator are **always shown
   side by side**, regardless of the stored mode preference — the toggle only matters on mobile.
-- **Sale Details ledger** (desktop only, see mobile note below): Qty / Price / Discount % / Tax %
+- **Sale Details ledger** (desktop only, see mobile note below): Qty / Price / Discount / Tax %
   input rows, each tappable to make it the active keypad target; computed Subtotal / Discount
   Amount / Tax Amount / Total rows below, all aligned in one label/value column. Equal-height with
   the calculator panel.
+- **Item discount type toggle** (`.disctype`, a small `% / Amount` segmented control below the
+  Item name/Unit row, present in *both* panels like that row, hidden in bare-Calc mode): switches
+  the per-item **Discount** field between a **percentage of the line subtotal** (`"pct"`, the
+  original behaviour) and a **flat money amount subtracted straight off** (`"amt"` — no percentage
+  maths). In `"amt"` mode the Discount field displays/enters as money (currency decimals, symbol on
+  the roomy Sale Details row) and `buildLine()` clamps it to the line subtotal so a line can't go
+  negative. The choice rides on `line.discountType`, is stored per saved item (see §4), restored
+  when a line is tapped for editing, carried by `effectiveLine()`, and reset to `"pct"` by **AC**.
+  The whole-sale **Overall Discount** below the Summary is unaffected — it was already a flat
+  entered amount and stays exactly that.
 - **Item name + Unit fields**: one row, just below the Qty/Price/Discount/Tax buttons — present in
   *both* the Sale Details panel and the Calculator panel (so it's there on mobile too, where Sale
   Details is hidden), all four inputs (2 name + 2 unit) kept in sync live. **Item name** is backed
   by a shared `<datalist id="itemSuggestions">` fed from two per-device `localStorage` lists (see
   §4): the last 10 distinct names used, and the top 5 by usage count. Typing (or picking a
   suggestion) that exactly matches a saved name (case-insensitive) autofills unit/qty/price/
-  discount/tax from that item's last-used values. **Unit** (e.g. `kg`, `pcs`, `box`) is a narrow
+  discount/discount-type/tax from that item's last-used values. **Unit** (e.g. `kg`, `pcs`, `box`) is a narrow
   companion field next to it with a static `<datalist id="unitSuggestions">` of common units,
   appended to Qty everywhere it's displayed (`5 kg`) — on-screen fields, the Current Sale list,
   both receipt formats, and the PDF's Qty column — and saved per item alongside price/discount/tax.
@@ -195,8 +205,9 @@ repo, not something to write down here.)
   same PDF via the shared `buildReceiptPdf()` (see §5 for which does what with it) — one row per
   line item, **Sl.no / Item name / Qty / Subtotal / Discount / Tax / Total** columns: Sl.no/Qty/
   Discount/Tax center-aligned to their headers, Subtotal/Total right-aligned (money columns, the
-  standard convention); blank item name shows **NA**; discount/tax shown as their rate, "-" when
-  zero; Qty includes the unit, e.g. "5 kg"; **Subtotal** shows the line's subtotal with a "(qty x
+  standard convention); blank item name shows **NA**; tax shown as its rate and Discount as its
+  rate (`"pct"` items) or the plain money amount (`"amt"` items — no symbol, per the PDF's
+  currency-scoping rule), "-" when zero; Qty includes the unit, e.g. "5 kg"; **Subtotal** shows the line's subtotal with a "(qty x
   unit price)" breakdown alongside it, in place of a separate Unit Price column — followed by a
   **Totals** row (Subtotal/Tax/Total each under its own column, Total here still the
   *pre*-overall-discount sum), an **Overall Discount** row (the flat amount, no "(N%)") when one's set, and a bold
@@ -241,18 +252,24 @@ with a toggle.
 ## 8. Features currently being worked on
 
 **None. The session is closed with no open or half-finished work.** The last thread of work was
-changing the Overall Discount from a percentage to a **flat money amount** typed in by hand, after
-feedback that a manual value was wanted instead of a rate. `overallDiscount` now holds a currency
-amount; `saleSums()` clamps it to the sale's own pre-discount total (so it can't go negative)
-rather than clamping the input to 0-100; the row shows the currency symbol/code as a prefix label
-(refreshed by `render()`) in place of the old "%"; the `overallDiscAmt` span only shows when the
-clamp actually bit; and the "(N%)" text was dropped from the PDF row and the plain-text receipt
-line. Verified via CDP: `30` entered against a $100 subtotal → $70 grand total on-screen, in the
-words line, and in a generated PDF ("Overall Discount  -15.00" style row, Totals row still
-pre-discount, Grand Total the final amount); `250` against $100 clamping to $100 (grand $0, clamp
-note shown); currency switch updating the prefix; AC resetting to 0. Implemented, verified,
-committed, deployed. Before that: centering the PDF's Qty/Discount/Tax columns to their headers,
-and the original percentage version of the Overall Discount feature. Before that: narrowing the PDF's currency display after feedback
+adding a **per-item discount type toggle** (`% / Amount`, `line.discountType` = `"pct"` | `"amt"`)
+so the shop can enter an item's Discount either as a rate or as a flat money amount with no
+percentage maths. `buildLine()` branches on the type and clamps an `"amt"` discount to the line
+subtotal; `fieldText()`/`entryDecimals()` show and accept an `"amt"` discount as money; a new
+`discTag()` helper feeds both the Current Sale list and the text receipt; the PDF's Discount column
+prints the rate or the plain amount; the type is stored per saved item (schema in §4), restored on
+edit, and reset to `"pct"` by **AC**. The `.disctype` control sits below the Item name/Unit row in
+both panels and is hidden in bare-Calc mode like that row. Verified via CDP: `10%` on a $100 line →
+−$10.00 / $90.00; switching to Amount and entering `7` → flat −$7.00 / $93.00; `500` as an amount
+clamping to −$100.00 / $0.00; the Current Sale list showing `−$8.00`; editing a saved line
+restoring the toggle to Amount; a two-item PDF showing "10%" on one row and "15.00" on the other
+with correct Totals/Grand Total; **AC** back to `%`. The whole-sale Overall Discount was left
+exactly as it was (already a flat entered amount). Before that: changing that Overall Discount from
+a percentage to a flat hand-entered money amount (`overallDiscount` holds a currency amount;
+`saleSums()` clamps it to the sale's pre-discount total; the row shows a currency prefix label in
+place of "%"; "(N%)" dropped from the PDF row and text receipt). Before that: centering the PDF's
+Qty/Discount/Tax columns to their headers, and the original percentage version of the Overall
+Discount feature. Before that: narrowing the PDF's currency display after feedback
 that showing it on every item row was noisy —
 it now only appears on the Subtotal/Total column headings ("Subtotal (INR)") and the Grand Total
 value ("INR 92.70"); item rows and the Totals row are plain numbers, and the now-dead
@@ -454,11 +471,21 @@ staying on `window.print()` — see §10.
   the **Grand Total** value ("INR 92.70"); every item row and the "Totals" row are plain numbers.
   Since nothing in the PDF prefixes a value with a symbol anymore, the WinAnsi-fallback logic
   (`pdfWithSymbol()`) became dead code and was removed rather than left in place.
-- **`entryDecimals()` distinguishes money fields (Price, the plain-Calculator result) from
-  Qty/Discount/Tax**, which stay at plain 2dp regardless of currency — qty and percentages aren't
-  money amounts, so there's no reason a 3-decimal currency should suddenly let you type "3.456" kg
-  or "8.25%" further out than before. Only fields that actually hold a currency amount follow the
-  selected currency's own precision.
+- **`entryDecimals()` distinguishes money fields (Price, the plain-Calculator result, and a
+  flat-`"amt"` item Discount) from Qty / percentage-Discount / Tax**, which stay at plain 2dp
+  regardless of currency — qty and percentages aren't money amounts, so there's no reason a
+  3-decimal currency should suddenly let you type "3.456" kg or "8.25%" further out than before.
+  Only fields that actually hold a currency amount follow the selected currency's own precision.
+- **Per-item Discount has a type toggle (`% / Amount`); the whole-sale Overall Discount does not.**
+  The item Discount was always a percentage; the shop asked to be able to key some item discounts
+  in as a straight money figure instead ("this one's $5 off, not 10% off"). Rather than a second
+  field, a small `.disctype` segmented control flips `line.discountType` between `"pct"` and
+  `"amt"`, and `buildLine()` is the single place the branch lives (`"amt"` → `discountAmt` is the
+  entered number, clamped to the line subtotal; `"pct"` → the old `subtotal * rate / 100`). It's a
+  per-line property (stored on each `sale[]` entry and each saved-item record, restored on edit)
+  because two lines in the same sale can legitimately want different types. The Overall Discount
+  didn't get a toggle because it had *just* been converted to an entered amount in the prior piece
+  of work — a "%" option there would undo that, and no one asked for one.
 - **Overall Discount is a flat money amount off the already-summed grand total, applied once, not a
   per-item field and not a percentage.** It answers a different question than the existing per-line
   Discount % ("take $30 off this whole sale," e.g. a loyalty/coupon/haggled discount, vs. "knock

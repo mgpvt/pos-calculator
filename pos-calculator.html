@@ -375,6 +375,36 @@
     background: color-mix(in srgb, var(--c-qty) 9%, var(--card));
   }
 
+  /* ---- Item discount type: percentage vs. flat entered amount ---- */
+  .disctype { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+  .disctype__lbl {
+    flex: 1;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .disctype__opt {
+    min-width: 3.6em;
+    padding: 4px 10px;
+    border-radius: 7px;
+    background: var(--card-2);
+    border: 1.5px solid transparent;
+    color: var(--ink-dim);
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
+  }
+  .disctype__opt.is-on {
+    border-color: var(--c-discount);
+    background: color-mix(in srgb, var(--c-discount) 12%, var(--card));
+    color: var(--c-discount);
+  }
+  .disctype__opt:focus-visible { outline: 2px solid var(--c-discount); outline-offset: 2px; }
+
   .row--total {
     margin-top: 5px;
     padding-top: 6px;
@@ -883,6 +913,7 @@
   .app[data-mode="calc"] #undoBtn,
   .app[data-mode="calc"] .fnrow,
   .app[data-mode="calc"] .itemname-wrap,
+  .app[data-mode="calc"] .disctype,
   .app[data-mode="calc"] .lcd__echo { display: none; }
 
   .app[data-mode="calc"] .carousel { grid-template-columns: auto; }
@@ -1042,6 +1073,12 @@
           aria-label="Qty unit, e.g. kg, pcs, box">
       </div>
 
+      <div class="disctype" role="group" aria-label="Item discount type">
+        <span class="disctype__lbl">Item discount</span>
+        <button type="button" class="disctype__opt" data-disctype="pct">%</button>
+        <button type="button" class="disctype__opt" data-disctype="amt">Amount</button>
+      </div>
+
       <div class="rows rows--out">
         <div class="row"><span class="row__lbl">Subtotal</span><span class="row__val" data-role="r-subtotal">0.00</span></div>
         <div class="row"><span class="row__lbl">Discount Amount</span><span class="row__val neg" data-role="r-discount">&minus;0.00</span></div>
@@ -1086,6 +1123,12 @@
           <input id="unitCalc" class="unitfield" type="text" maxlength="12"
             placeholder="unit" list="unitSuggestions" autocomplete="off"
             aria-label="Qty unit, e.g. kg, pcs, box">
+        </div>
+
+        <div class="disctype" role="group" aria-label="Item discount type">
+          <span class="disctype__lbl">Item discount</span>
+          <button type="button" class="disctype__opt" data-disctype="pct">%</button>
+          <button type="button" class="disctype__opt" data-disctype="amt">Amount</button>
         </div>
 
         <div class="ctrlrow">
@@ -1329,7 +1372,10 @@
     // hold an actual money amount (Price, and the plain-Calculator result) follow
     // the selected currency's own decimal places.
     function entryDecimals() {
-      return (activeField === "price" || activeField === "calc") ? curDecimals() : 2;
+      if (activeField === "price" || activeField === "calc") return curDecimals();
+      // A flat-amount item discount is a money value too, so it follows the currency's precision.
+      if (activeField === "discount" && line.discountType === "amt") return curDecimals();
+      return 2;
     }
 
     /* ---------- Saved items (per device): recent + most-commonly-used ---------- */
@@ -1350,7 +1396,7 @@
     function rememberItem(L) {
       var name = (L.name || "").trim().slice(0, 60);
       if (!name) return;
-      var rec = { name: name, unit: L.unit, qty: L.qty, price: L.price, discount: L.discount, tax: L.tax };
+      var rec = { name: name, unit: L.unit, qty: L.qty, price: L.price, discount: L.discount, discountType: L.discountType, tax: L.tax };
 
       var recent = readItemList(ITEMS_RECENT_KEY).filter(function (it) { return !sameName(it.name, name); });
       recent.unshift(rec);
@@ -1363,9 +1409,9 @@
       if (existing) {
         existing.count = (existing.count || 1) + 1;
         existing.unit = rec.unit; existing.qty = rec.qty; existing.price = rec.price;
-        existing.discount = rec.discount; existing.tax = rec.tax;
+        existing.discount = rec.discount; existing.discountType = rec.discountType; existing.tax = rec.tax;
       } else {
-        common.push({ name: rec.name, unit: rec.unit, qty: rec.qty, price: rec.price, discount: rec.discount, tax: rec.tax, count: 1 });
+        common.push({ name: rec.name, unit: rec.unit, qty: rec.qty, price: rec.price, discount: rec.discount, discountType: rec.discountType, tax: rec.tax, count: 1 });
       }
       common.sort(function (a, b) { return (b.count || 0) - (a.count || 0); });
       if (common.length > ITEMS_COMMON_MAX) common.length = ITEMS_COMMON_MAX;
@@ -1404,7 +1450,9 @@
       calc:     { label: "",         suffix: "" }
     };
 
-    var line = { name: "", unit: "", qty: 1, price: 0, discount: 0, tax: readTax(), calc: 0 };
+    // discountType: "pct" = the Discount field is a percentage of the line subtotal (the original
+    // behaviour); "amt" = it's a flat money amount subtracted straight off, no percentage maths.
+    var line = { name: "", unit: "", qty: 1, price: 0, discount: 0, discountType: "pct", tax: readTax(), calc: 0 };
     var sale = [];
     var overallDiscount = 0;      // flat money amount taken off the whole sale's grand total, on top of any per-item discount
     var editIndex = null;                 // index of the sale item being edited, or null
@@ -1513,19 +1561,32 @@
       var unit = (src.unit || "").trim();
       var qty = +src.qty || 0, price = +src.price || 0;
       var discount = +src.discount || 0, tax = +src.tax || 0;
+      var discountType = src.discountType === "amt" ? "amt" : "pct";
       var subtotal = qty * price;
-      var discountAmt = subtotal * discount / 100;
+      // "amt": the field is the discount itself (clamped so it can't exceed the line). "pct": a rate.
+      var discountAmt = discountType === "amt"
+        ? Math.min(Math.max(0, discount), subtotal)
+        : subtotal * discount / 100;
       var discounted = subtotal - discountAmt;
       var taxAmt = discounted * tax / 100;
       var total = discounted + taxAmt;
       return {
-        name: name, unit: unit, qty: qty, price: price, discount: discount, tax: tax,
+        name: name, unit: unit, qty: qty, price: price,
+        discount: discount, discountType: discountType, tax: tax,
         subtotal: subtotal, discountAmt: discountAmt,
         discounted: discounted, taxAmt: taxAmt, total: total
       };
     }
+    // How a line's discount reads in the sale list / text receipt: a rate ("-10%") or,
+    // for a flat-amount discount, the money taken off ("-$5.00"). "" when there's no discount.
+    function discTag(it) {
+      if (!it.discount) return "";
+      return it.discountType === "amt"
+        ? MINUS + withSymbol(money(it.discountAmt))
+        : MINUS + trim(it.discount) + "%";
+    }
     function effectiveLine() {
-      var L = { name: line.name, unit: line.unit, qty: line.qty, price: line.price, discount: line.discount, tax: line.tax };
+      var L = { name: line.name, unit: line.unit, qty: line.qty, price: line.price, discount: line.discount, discountType: line.discountType, tax: line.tax };
       if (buffer !== "" && activeField !== "calc") {
         var v = parseFloat(buffer);
         if (isFinite(v)) L[activeField] = v;
@@ -1754,7 +1815,7 @@
       if (!it || emode() === "calc") return;
       editIndex = i;
       line.name = it.name || ""; line.unit = it.unit || ""; line.qty = it.qty; line.price = it.price;
-      line.discount = it.discount; line.tax = it.tax;
+      line.discount = it.discount; line.discountType = it.discountType === "amt" ? "amt" : "pct"; line.tax = it.tax;
       activeField = "qty";
       buffer = ""; pendingOp = null; awaitingOperand = false; justEvaluated = false;
       render();
@@ -1783,7 +1844,7 @@
       sale = [];
       editIndex = null;
       overallDiscount = 0;
-      line = { name: "", unit: "", qty: 1, price: 0, discount: 0, tax: readTax(), calc: 0 };
+      line = { name: "", unit: "", qty: 1, price: 0, discount: 0, discountType: "pct", tax: readTax(), calc: 0 };
       activeField = emode() === "calc" ? "calc" : "qty";
       buffer = ""; pendingOp = null; awaitingOperand = false; justEvaluated = false;
       render();
@@ -1814,9 +1875,11 @@
 
     function fieldText(f) {
       var suffix = FIELDS[f].suffix;
+      var discAmt = f === "discount" && line.discountType === "amt";
+      if (discAmt) suffix = "";                    // a flat amount, not a "%"
       if (f === "qty" && line.unit) suffix = " " + line.unit + suffix;
       if (f === activeField && buffer !== "") return buffer + suffix;
-      if (f === "price") return money(line.price);
+      if (f === "price" || discAmt) return money(line[f]);
       return trim(line[f]) + suffix;
     }
     function setLcd(el, text) {
@@ -1864,14 +1927,20 @@
       if (!calc) {
         var eff = effectiveLine();
 
+        var discAsAmt = line.discountType === "amt";
         ["qty", "price", "discount", "tax"].forEach(function (f) {
           // The narrow Calculator quick-jump button (fn-*) skips the symbol — no room to spare
-          // there — but the roomier Sale Details row (fv-*) gets it for Price.
-          var v = role("fv-" + f); if (v) v.textContent = f === "price" ? withSymbol(fieldText(f)) : fieldText(f);
+          // there — but the roomier Sale Details row (fv-*) gets it for Price and for a
+          // flat-amount item Discount (both are money values).
+          var asMoney = f === "price" || (f === "discount" && discAsAmt);
+          var v = role("fv-" + f); if (v) v.textContent = asMoney ? withSymbol(fieldText(f)) : fieldText(f);
           var fn = role("fn-" + f); if (fn) fn.textContent = fieldText(f);
         });
         document.querySelectorAll(".row--in, .fn").forEach(function (b) {
           b.classList.toggle("is-active", b.dataset.field === activeField);
+        });
+        document.querySelectorAll(".disctype__opt").forEach(function (b) {
+          b.classList.toggle("is-on", b.dataset.disctype === line.discountType);
         });
 
         role("r-subtotal").textContent = withSymbol(money8(eff.subtotal));
@@ -1956,7 +2025,8 @@
       var numbered = sale.length > 1;
       body.innerHTML = sale.map(function (it, i) {
         var pieces = [];
-        if (it.discount) pieces.push(MINUS + trim(it.discount) + "%");
+        var dt = discTag(it);
+        if (dt) pieces.push(dt);
         if (it.tax) pieces.push("+" + trim(it.tax) + "% tax");
         var sub = pieces.length ? "<small>" + pieces.join(" " + MIDDOT + " ") + "</small>" : "";
         var cls = "li" + (i === editIndex ? " li--editing" : "");
@@ -2004,7 +2074,8 @@
       L.push(rule);
       sale.forEach(function (it, i) {
         var tags = [];
-        if (it.discount) tags.push(MINUS + trim(it.discount) + "%");
+        var dt = discTag(it);
+        if (dt) tags.push(dt);
         if (it.tax) tags.push("+" + trim(it.tax) + "% tax");
         var prefix = numbered ? (i + 1) + ") " : "";
         if (it.name) { L.push(prefix + it.name); prefix = "   "; }
@@ -2057,7 +2128,7 @@
           it.name || "NA",
           qtyDisp,
           money(it.subtotal) + " (" + qtyDisp + " x " + money(it.price) + ")",
-          it.discount ? trim(it.discount) + "%" : "-",
+          it.discount ? (it.discountType === "amt" ? money(it.discountAmt) : trim(it.discount) + "%") : "-",
           it.tax ? trim(it.tax) + "%" : "-",
           money(it.total)
         ];
@@ -2257,6 +2328,7 @@
           line.qty = +match.qty || line.qty;
           line.price = +match.price || 0;
           line.discount = +match.discount || 0;
+          line.discountType = match.discountType === "amt" ? "amt" : "pct";
           line.tax = match.tax != null ? +match.tax : line.tax;
           buffer = ""; pendingOp = null; awaitingOperand = false; justEvaluated = false;
           render();
@@ -2283,6 +2355,18 @@
       // blur restores the field from `line.unit` if nothing new was picked/typed.
       el.addEventListener("focus", function () { el.value = ""; });
       el.addEventListener("blur", function () { el.value = line.unit; });
+    });
+
+    document.querySelectorAll(".disctype__opt").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var t = b.dataset.disctype === "amt" ? "amt" : "pct";
+        if (t === line.discountType) return;
+        clickSound("ctrl");
+        // Commit anything half-typed into Discount before the field's meaning changes.
+        if (activeField === "discount") commitBuffer();
+        line.discountType = t;
+        render();
+      });
     });
 
     document.querySelectorAll("[data-field]").forEach(function (b) {
