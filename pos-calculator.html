@@ -718,7 +718,7 @@
     font-size: 0.76rem;
   }
 
-  /* ---- Overall discount: one flat/percent knock off the whole sale's grand total ---- */
+  /* ---- Overall discount: one flat money amount knocked off the whole sale's grand total ---- */
   .overallDisc {
     display: flex;
     align-items: center;
@@ -740,7 +740,7 @@
     color: var(--ink-dim);
   }
   .overallDisc input {
-    width: 3.4em;
+    width: 6em;
     text-align: right;
     font-family: var(--mono);
     font-size: 0.92rem;
@@ -752,7 +752,7 @@
     padding: 3px 5px;
   }
   .overallDisc input:focus { outline: none; border-color: var(--c-discount); }
-  .overallDisc__pct { font-weight: 700; color: var(--ink-dim); }
+  .overallDisc__cur { font-weight: 700; color: var(--ink-dim); font-family: var(--mono); }
   .overallDisc__amt {
     min-width: 4.6em;
     text-align: right;
@@ -1138,8 +1138,8 @@
 
   <div class="overallDisc">
     <label for="overallDiscount">Overall Discount</label>
-    <input id="overallDiscount" type="text" inputmode="decimal" maxlength="6" value="0">
-    <span class="overallDisc__pct">%</span>
+    <span class="overallDisc__cur" data-role="overallDiscCur">$</span>
+    <input id="overallDiscount" type="text" inputmode="decimal" maxlength="12" value="0">
     <span class="overallDisc__amt" data-role="overallDiscAmt"></span>
   </div>
 
@@ -1406,7 +1406,7 @@
 
     var line = { name: "", unit: "", qty: 1, price: 0, discount: 0, tax: readTax(), calc: 0 };
     var sale = [];
-    var overallDiscount = 0;      // % taken off the whole sale's grand total, on top of any per-item discount
+    var overallDiscount = 0;      // flat money amount taken off the whole sale's grand total, on top of any per-item discount
     var editIndex = null;                 // index of the sale item being edited, or null
     var mode = readMode();                // stored preference: "calc" | "sales"
     var currency = readCurrency();        // stored preference: currency code, e.g. "USD"
@@ -1885,11 +1885,15 @@
         role("s-tax").textContent = withSymbol(money8(sums.tax));
         role("s-grand").textContent = withSymbol(money8(sums.grand));
 
+        var odCur = role("overallDiscCur");
+        if (odCur) odCur.textContent = curSymbol();
         var odInput = $("#overallDiscount");
-        if (odInput && document.activeElement !== odInput) odInput.value = trim(overallDiscount);
+        if (odInput && document.activeElement !== odInput) odInput.value = trim(overallDiscount, curDecimals());
         var odAmt = role("overallDiscAmt");
         if (odAmt) {
-          odAmt.textContent = sums.overallDiscountAmt > 0
+          // Only shown when the typed amount had to be clamped down to the sale total —
+          // otherwise it would just repeat the number in the input.
+          odAmt.textContent = sums.overallDiscountAmt > 0 && sums.overallDiscountAmt < (+overallDiscount || 0)
             ? MINUS + withSymbol(money8(sums.overallDiscountAmt)) : "";
         }
 
@@ -1975,13 +1979,12 @@
       var base = sale.reduce(function (a, it) {
         a.sub += it.subtotal; a.tax += it.taxAmt; a.grand += it.total; return a;
       }, { sub: 0, tax: 0, grand: 0 });
-      var pct = Math.max(0, Math.min(100, +overallDiscount || 0));
-      var discAmt = base.grand * pct / 100;
+      // A flat money amount entered by hand, clamped so it can't exceed the sale's own total.
+      var discAmt = Math.min(Math.max(0, +overallDiscount || 0), base.grand);
       return {
         sub: base.sub,
         tax: base.tax,
         preDiscountGrand: base.grand,
-        overallDiscountPct: pct,
         overallDiscountAmt: discAmt,
         grand: base.grand - discAmt
       };
@@ -2014,7 +2017,7 @@
       L.push("Subtotal: " + withSymbol(money(s.sub)));
       L.push("Total Tax: " + withSymbol(money(s.tax)));
       if (s.overallDiscountAmt > 0) {
-        L.push("Overall Discount (" + trim(s.overallDiscountPct) + "%): " + MINUS + withSymbol(money(s.overallDiscountAmt)));
+        L.push("Overall Discount: " + MINUS + withSymbol(money(s.overallDiscountAmt)));
       }
       L.push("GRAND TOTAL: " + withSymbol(money(s.grand)));
       L.push("In words: " + amountInWords(s.grand));
@@ -2065,7 +2068,7 @@
       ];
       if (s.overallDiscountAmt > 0) {
         footRows.push([
-          { content: "Overall Discount (" + trim(s.overallDiscountPct) + "%)", colSpan: 6 },
+          { content: "Overall Discount", colSpan: 6 },
           "-" + money(s.overallDiscountAmt)
         ]);
       }
@@ -2220,7 +2223,9 @@
     if (overallDiscInput) {
       overallDiscInput.addEventListener("input", function () {
         var v = parseFloat(overallDiscInput.value);
-        overallDiscount = isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
+        // A flat money amount; the sale-total clamp lives in saleSums() so the field
+        // itself keeps whatever was typed.
+        overallDiscount = isFinite(v) ? Math.max(0, v) : 0;
         render();
       });
       overallDiscInput.addEventListener("focus", function () { overallDiscInput.select(); });
