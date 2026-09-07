@@ -159,11 +159,14 @@ repo, not something to write down here.)
   printed/PDF receipt table (see below).
 - **Calculator**: twin LCD (Entry/Input on the left, Total/Result on the right, both auto-shrink
   font size in three tiers so an 8-digit number never overflows or truncates), a Qty/Price/
-  Discount/Tax quick-jump row, CE/⌫/±/% controls, and a 4×4 keypad (`7 8 9 ÷ …`). The left LCD's
-  label tracks the active quick-jump field — **"Unit price"** for both the Qty and Price fields
-  (the left LCD is where the price is keyed in the common case, qty defaulting to 1, and the shop
-  owner asked for that wording in the default view), and "Entry · DISCOUNT / TAX" for those two.
-  Bare Calc mode still labels it "Input". Values are capped
+  Discount/Tax quick-jump row, CE/⌫/±/% controls, and a 4×4 keypad (`7 8 9 ÷ …`). In Sales mode the
+  **left LCD is a dedicated Unit Price readout** — fixed label **"Unit price"**, and it always
+  shows the price (`fieldText("price")`: live while Price is being typed, the committed
+  `line.price` otherwise), never the qty/discount/tax value. Those three fields still edit via
+  their quick-jump buttons — their live values show on the buttons themselves (`fn-*`/`fv-*`) and
+  in the echo line under the LCDs (`qty × price − disc% + tax%`), just not in the big left LCD.
+  The right LCD is the running line Total. Bare Calc mode reverts the left LCD to a normal
+  entry display labelled "Input". Values are capped
   at 8 digits (`MAX_VALUE = 99999999`); anything larger displays `ERROR`, and a red banner just
   below the calculator (`#calcErr`, both modes, both panels) explains why ("amount exceeds the
   maximum this calculator supports (99,999,999)"), clearing again once the values are fixed —
