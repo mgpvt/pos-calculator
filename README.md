@@ -1,13 +1,21 @@
-# bconnTech Calculator
+# Shop Calculator
 
-A single-file **POS-style shop calculator** — no install, no backend, no build step.
+**POS. BILLING. SALES.** — a POS-style shop calculator by **bconnTech**. No backend, no build
+step, works offline, and installs on a phone like an app.
 
 **Live:** https://mgpvt.github.io/pos-calculator/
 
+## Install on a phone or tablet
+
+- **Android (Chrome):** open the link, then menu → *Install app* / *Add to Home screen*.
+- **iPhone / iPad (Safari):** open the link, tap *Share* → *Add to Home Screen*.
+
+After the first load it runs fully offline.
+
 ## What it does
 
-- **Calc / Sales modes** — a plain calculator, or a full sale register. On the web both
-  panels always show side by side; on mobile there's a single stacked screen (no swiping) —
+- **Calc / Sales modes** — a plain calculator, or a full sale register. On wide screens both
+  panels show side by side; on a phone there's a single stacked screen (no swiping) —
   the Calc/Sales toggle there switches between just the calculator and the full register.
 - **Sale ledger** — Qty × Price, minus a per-item Discount (as a **%** or a **flat amount**,
   your choice per line), plus Tax %, giving Subtotal, Discount Amount, Tax Amount and Total.
@@ -21,7 +29,7 @@ A single-file **POS-style shop calculator** — no install, no backend, no build
   out in cheque form ("… and 24/100").
 - **Currency** — pick from 15 codes; decimals and the symbol/code follow your choice.
 - **Share a receipt** — Email, WhatsApp, copy as text, the OS share sheet, or **Download PDF**
-  (a proper itemised PDF receipt, generated in the browser).
+  (a proper itemised PDF receipt, generated on the device).
 - Tax % is remembered between sessions (kept through *AC* unless set to 0). Shop name, mode,
   sound and currency are remembered per device.
 - Light/dark aware, keyboard support, synthesised key-click / confirm sounds (toggleable).
@@ -30,12 +38,9 @@ A single-file **POS-style shop calculator** — no install, no backend, no build
 
 | File | |
 |---|---|
-| `index.html` / `pos-calculator.html` | the POS calculator (byte-identical) |
+| `index.html` / `pos-calculator.html` | the Shop Calculator app (byte-identical) |
+| `manifest.webmanifest`, `sw.js`, `icons/` | installable-app setup (home-screen icon, offline cache) |
+| `vendor/` | bundled PDF library and fonts, so nothing loads from the internet |
 | `calculator.html` | the earlier standalone pocket calculator |
-| `bconntech_logo.png` | source logo (inlined as a data URI in the pages) |
 
-Open any HTML file directly in a browser — there is no build step. The PDF receipt pulls jsPDF
-from a CDN the first time a browser loads the page; everything else is self-contained, and all
-data stays on the device (nothing is sent anywhere).
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+All data stays on the device (nothing is sent anywhere).
