@@ -38,12 +38,13 @@ Made by bconnTech.
 
 ## Graphics (ready, in `store/graphics/`)
 - **Feature graphic 1024x500:** `feature-graphic.png`
-- **Phone screenshots 1080x1920 (9:16):** `phone-1.png` ... `phone-5.png`, in this order:
+- **Phone screenshots 1080x1920 (9:16):** `phone-1.png` ... `phone-6.png`, in this order:
   1. Ring up sales in seconds
   2. Totals that always add up
   3. Share the bill your way
-  4. Daily totals at a glance
-  5. Reports in PDF or Excel
+  4. Your logo on every bill
+  5. Daily totals at a glance
+  6. Reports in PDF or Excel
 - **App icon 512x512:** `../../icons/icon-512.png`
 - To change the text or order, edit and run `store/src/build_graphics.py` (screens are in `store/src/raw/`).
 - The screenshots use sample data (a store called "Green Valley Store"), not real customers.

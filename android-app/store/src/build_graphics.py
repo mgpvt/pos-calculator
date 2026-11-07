@@ -1,7 +1,7 @@
 """Builds the Google Play graphics from the raw app captures in ./raw.
 
 Run from anywhere:  python build_graphics.py
-Outputs (../graphics): phone-1..5.png (1080x1920) and feature-graphic.png (1024x500).
+Outputs (../graphics): phone-1..6.png (1080x1920) and feature-graphic.png (1024x500).
 Needs Google Chrome; paths below match this PC.
 """
 import os, subprocess, tempfile
@@ -74,8 +74,9 @@ JOBS = [
     ("phone-1.png", 1080, 1920, phone_page("Ring up sales<br>in seconds", "Item, quantity, price, discount and tax", "b-enter.jpg")),
     ("phone-2.png", 1080, 1920, phone_page("Totals that<br>always add up", "Subtotal, tax and grand total, written out in words", "c-sale.jpg")),
     ("phone-3.png", 1080, 1920, phone_page("Share the bill<br>your way", "PDF, WhatsApp, Email or copy the text", "d-share.jpg")),
-    ("phone-4.png", 1080, 1920, phone_page("Daily totals<br>at a glance", "Pick any dates and see every day's sales", "e-history.jpg")),
-    ("phone-5.png", 1080, 1920, phone_page("Reports in<br>PDF or Excel", "Every sale and item, ready to send or save", "f-sales.jpg")),
+    ("phone-4.png", 1080, 1920, phone_page("Your logo on<br>every bill", "Add your address, phone and tax number", "g-shop.jpg")),
+    ("phone-5.png", 1080, 1920, phone_page("Daily totals<br>at a glance", "Pick any dates and see every day's sales", "e-history.jpg")),
+    ("phone-6.png", 1080, 1920, phone_page("Reports in<br>PDF or Excel", "Every sale and item, ready to send or save", "f-sales.jpg")),
     ("feature-graphic.png", 1024, 500, feature_page()),
 ]
 
