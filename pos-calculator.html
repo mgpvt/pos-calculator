@@ -2360,6 +2360,7 @@
     function downloadPdf() {
       var built = buildReceiptPdf();
       if (!built) { shareNote("PDF library didn't load — check your connection and try again."); return; }
+      if (isNativeApp()) { deliverFile(built.doc.output("blob"), built.filename, "application/pdf", shopTitle()); return; }
       built.doc.save(built.filename);
     }
 
@@ -2369,6 +2370,7 @@
       var built = buildReceiptPdf();
       if (!built) { shareNote("PDF library didn't load — check your connection and try again."); return; }
       var blob = built.doc.output("blob");
+      if (isNativeApp()) { deliverFile(blob, built.filename, "application/pdf", shopTitle()); return; }
       var file = null;
       try { file = new File([blob], built.filename, { type: "application/pdf" }); } catch (e) {}
       if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -2412,7 +2414,7 @@
 
     if (shareToggleEl) {
       var optShare = document.getElementById("shOptShare");
-      if (optShare && navigator.share) optShare.hidden = false;
+      if (optShare && (navigator.share || isNativeApp())) optShare.hidden = false;
 
       shareToggleEl.addEventListener("click", function () {
         var opening = shareMenuEl.hidden;
@@ -2441,7 +2443,7 @@
         }
       });
       if (optShare) optShare.addEventListener("click", function () {
-        if (!navigator.share) return;
+        if (!navigator.share && !isNativeApp()) return;
         sharePdf();
       });
       document.getElementById("shOptPrint").addEventListener("click", function () {
@@ -2839,8 +2841,29 @@
       var shop = (shopTitle() || "Shop").replace(/[^\w-]+/g, "_").replace(/^_+|_+$/g, "") || "Shop";
       return shop + "_sales_" + from + (to !== from ? "_to_" + to : "");
     }
+    // Inside the Android app (Capacitor) a blob download goes nowhere, so write the file to the
+    // app's cache and open the system share sheet (Save to Drive/Files, WhatsApp, Email...).
+    function isNativeApp() {
+      return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    }
+    function deliverNative(blob, filename, title) {
+      var fr = new FileReader();
+      fr.onload = function () {
+        var data = String(fr.result).split(",")[1] || "";
+        var FS = window.Capacitor.registerPlugin("Filesystem");
+        var Sh = window.Capacitor.registerPlugin("Share");
+        FS.writeFile({ path: filename, data: data, directory: "CACHE" })
+          .then(function (res) { return Sh.share({ title: title, files: [res.uri] }); })
+          .catch(function (err) {
+            if (err && /cancel/i.test(String(err.message || err))) return; // closed the share sheet
+            toast("Couldn't open the share sheet on this device.");
+          });
+      };
+      fr.readAsDataURL(blob);
+    }
     // Phones/tablets: hand the file to the share sheet (WhatsApp, Email, Drive...). Elsewhere: plain download.
     function deliverFile(blob, filename, mime, title) {
+      if (isNativeApp()) { deliverNative(blob, filename, title); return; }
       var file = null;
       try { file = new File([blob], filename, { type: mime }); } catch (e) {}
       if (file && narrowMq.matches && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -3044,7 +3067,7 @@
     refreshItemSuggestions();
     applyMode();
 
-    if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) {
+    if ("serviceWorker" in navigator && /^https?:/.test(location.protocol) && !window.Capacitor) {
       window.addEventListener("load", function () {
         navigator.serviceWorker.register("sw.js").catch(function () {});
       });

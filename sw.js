@@ -1,5 +1,5 @@
 /* Shop Calculator - offline cache. Bump CACHE when any listed file changes. */
-var CACHE = "shop-calculator-v3";
+var CACHE = "shop-calculator-v4";
 var FILES = [
   "./", "index.html", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "icons/apple-touch-icon.png",

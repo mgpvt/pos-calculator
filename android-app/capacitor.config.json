@@ -1,0 +1,9 @@
+{
+  "appId": "com.bconntech.shopcalculator",
+  "appName": "Shop Calculator",
+  "webDir": "www",
+  "backgroundColor": "#16265f",
+  "android": {
+    "allowMixedContent": false
+  }
+}
