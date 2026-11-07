@@ -5,6 +5,8 @@ step, works offline, and installs on a phone like an app.
 
 **Live:** https://mgpvt.github.io/pos-calculator/
 
+**New here?** Read the first-time guide: [guide.html](guide.html) (set-up, first sale, history and reports).
+
 ## Install on a phone or tablet
 
 - **Android (Chrome):** open the link, then menu → *Install app* / *Add to Home screen*.
@@ -45,6 +47,9 @@ After the first load it runs fully offline.
 |---|---|
 | `index.html` / `pos-calculator.html` | the Shop Calculator app (byte-identical) |
 | `manifest.webmanifest`, `sw.js`, `icons/` | installable-app setup (home-screen icon, offline cache) |
+| `guide.html`, `guide-img/` | first-time user guide (a web page) |
+| `privacy.html` | privacy policy |
+| `android-app/` | Android app project; `android-app/docs/` has the installation and publishing guide |
 | `vendor/` | bundled PDF and Excel libraries and fonts, so nothing loads from the internet |
 | `calculator.html` | the earlier standalone pocket calculator |
 

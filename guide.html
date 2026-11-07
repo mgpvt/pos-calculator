@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shop Calculator - Getting Started</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A step-by-step guide for first-time users of Shop Calculator: set up your shop, make a sale, save it, share the bill and export reports.">
+<meta name="theme-color" content="#16265f">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+  :root {
+    --ground: #eef1fb; --card: #ffffff; --ink: #1b2450; --dim: #5b6590; --line: #d3dae9;
+    --navy: #16265f; --accent: #2563eb; --ok: #0f7d39; --warn-bg: #fff6dd; --warn-line: #e0a800; --code: #f3f5fb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ground: #0e1424; --card: #141b30; --ink: #e7ecf8; --dim: #9aa6cc; --line: #262f49;
+      --accent: #7ea6ff; --ok: #4cc27f; --warn-bg: #2b2411; --warn-line: #b58a00; --code: #10182b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  a { color: var(--accent); }
+  header { background: linear-gradient(180deg, #1c317a, var(--navy)); color: #eaf0ff; padding: 22px 16px 26px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  header .brand { display: flex; align-items: center; gap: 12px; }
+  header img { width: 44px; height: 44px; border-radius: 10px; }
+  header h1 { margin: 0; font-size: 1.45rem; line-height: 1.2; }
+  header p { margin: 2px 0 0; font-size: 0.78rem; letter-spacing: 0.14em; opacity: 0.8; font-weight: 600; }
+  header .lead { margin: 16px 0 0; font-size: 1rem; letter-spacing: 0; font-weight: 400; opacity: 0.95; }
+  .open { display: inline-block; margin-top: 14px; padding: 10px 18px; border-radius: 10px; background: #fff;
+    color: var(--navy); font-weight: 700; text-decoration: none; }
+  main { padding: 8px 16px 56px; }
+  nav.toc { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin: 18px 0; }
+  nav.toc strong { font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+  nav.toc ol { margin: 6px 0 0; padding-left: 20px; columns: 2; column-gap: 24px; font-size: 0.92rem; }
+  @media (max-width: 520px) { nav.toc ol { columns: 1; } }
+  section { margin-top: 34px; }
+  h2 { font-size: 1.3rem; margin: 0 0 6px; color: var(--navy); }
+  @media (prefers-color-scheme: dark) { h2 { color: #cdd9ff; } }
+  h2 .n { display: inline-grid; place-items: center; width: 28px; height: 28px; margin-right: 8px; border-radius: 50%;
+    background: var(--navy); color: #fff; font-size: 0.9rem; vertical-align: 2px; }
+  h3 { font-size: 1.02rem; margin: 22px 0 4px; }
+  p { margin: 8px 0; }
+  ol.steps, ul { padding-left: 22px; }
+  ol.steps li, ul li { margin: 6px 0; }
+  figure { margin: 16px auto; max-width: 300px; text-align: center; }
+  figure img { width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--line); box-shadow: 0 8px 22px -14px rgba(10,16,40,0.5); }
+  figcaption { margin-top: 6px; font-size: 0.8rem; color: var(--dim); }
+  .tip, .warn { margin: 14px 0; padding: 10px 14px; border-radius: 10px; font-size: 0.94rem; }
+  .tip { background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--ok); }
+  .warn { background: var(--warn-bg); border-left: 5px solid var(--warn-line); }
+  kbd, .btn { display: inline-block; padding: 0 7px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px;
+    background: var(--card); font: 600 0.86em/1.6 system-ui, sans-serif; white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.93rem; background: var(--card);
+    border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { background: var(--code); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+  tr:last-child td { border-bottom: 0; }
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; padding: 0 14px; }
+  summary { cursor: pointer; font-weight: 600; padding: 11px 0; }
+  details p { margin-top: 0; }
+  footer { text-align: center; font-size: 0.8rem; color: var(--dim); padding: 0 16px 36px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <img src="icons/icon-192.png" alt="bconnTech logo">
+      <div><h1>Shop Calculator</h1><p>POS. BILLING. SALES.</p></div>
+    </div>
+    <p class="lead">A first-time guide: set up your shop in a few minutes, ring up a sale, share the bill, and see your daily totals.</p>
+    <a class="open" href="./">Open the app</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <strong>In this guide</strong>
+    <ol>
+      <li><a href="#install">Open or install the app</a></li>
+      <li><a href="#setup">First-time setup</a></li>
+      <li><a href="#sale">Make your first sale</a></li>
+      <li><a href="#save">Save the sale</a></li>
+      <li><a href="#share">Share the bill</a></li>
+      <li><a href="#history">Sales history and reports</a></li>
+      <li><a href="#tips">Handy tips</a></li>
+      <li><a href="#faq">Questions</a></li>
+    </ol>
+  </nav>
+
+  <section id="install">
+    <h2><span class="n">1</span>Open or install the app</h2>
+    <p>Shop Calculator works in any modern browser and needs no account. You can use it straight from the link, or install it so it opens like a normal app, even without internet.</p>
+    <table>
+      <tr><th>Device</th><th>How to install</th></tr>
+      <tr><td><strong>Android phone</strong></td><td>Open the link in Chrome, tap the <kbd>&#8942;</kbd> menu, then <kbd>Install app</kbd> (or <kbd>Add to Home screen</kbd>). Or install it from Google Play when it is available.</td></tr>
+      <tr><td><strong>iPhone / iPad</strong></td><td>Open the link in <strong>Safari</strong>, tap the <kbd>Share</kbd> button, then <kbd>Add to Home Screen</kbd>.</td></tr>
+      <tr><td><strong>Windows / Mac</strong></td><td>Open the link in Chrome or Edge and click the small install icon at the right end of the address bar. Or just keep it as a bookmark.</td></tr>
+    </table>
+    <div class="tip">After the first time it opens, it works offline. Your shop name, items and sales stay on that device only.</div>
+  </section>
+
+  <section id="setup">
+    <h2><span class="n">2</span>First-time setup</h2>
+    <p>Do this once. It takes about two minutes, and the app remembers everything.</p>
+    <figure>
+      <img src="guide-img/2-sales-mode.jpg" alt="The app in Sales mode showing the shop name, currency and calculator" loading="lazy">
+      <figcaption>Sales mode, with the shop name and currency set.</figcaption>
+    </figure>
+    <ol class="steps">
+      <li><strong>Choose Sales mode.</strong> At the top, tap <kbd>Sales</kbd>. (<kbd>Calc</kbd> is a plain calculator.) On a computer or tablet both views are always shown side by side.</li>
+      <li><strong>Type your shop name</strong> in the bar under the title. It is printed on every bill and PDF.</li>
+      <li><strong>Pick your currency</strong> from the drop-down (for example <kbd>INR</kbd>, <kbd>AED</kbd>, <kbd>KWD</kbd>, <kbd>USD</kbd>). Decimals and the symbol adjust automatically, for example 3 decimals for KWD.</li>
+      <li><strong>Set your usual tax rate.</strong> Tap <kbd>TAX</kbd>, type the rate (for example <kbd>5</kbd>), then tap <kbd>PRICE</kbd> to move on. The app keeps this rate for every new item. Use <kbd>0</kbd> if you do not charge tax.</li>
+      <li><strong>Sound.</strong> The speaker button turns key clicks on or off.</li>
+    </ol>
+    <div class="warn">Do not press <kbd>=</kbd> while you are only setting the tax rate. In Sales mode <kbd>=</kbd> adds the current item to the sale. Tap another box (like <kbd>PRICE</kbd>) instead.</div>
+  </section>
+
+  <section id="sale">
+    <h2><span class="n">3</span>Make your first sale</h2>
+    <figure>
+      <img src="guide-img/3-enter-item.jpg" alt="Entering an item: Rice, 2 kg at 12.50 with 10 percent discount and 5 percent tax" loading="lazy">
+      <figcaption>Rice, 2 kg at 12.50, 10% off, 5% tax. The right display shows the line total.</figcaption>
+    </figure>
+    <p>Each item is one line. Fill in what you need, then press <kbd>=</kbd>.</p>
+    <ol class="steps">
+      <li><strong>Item name</strong> (optional) and <strong>unit</strong> such as <kbd>kg</kbd>, <kbd>pcs</kbd>, <kbd>box</kbd>. The app suggests items you sold before and fills in their last price.</li>
+      <li>Tap <kbd>QTY</kbd> and type the quantity. Tap <kbd>PRICE</kbd> and type the price of one unit.</li>
+      <li><strong>Discount (optional).</strong> Tap <kbd>DISC</kbd> and type a number. Use the <kbd>%</kbd> / <kbd>Amount</kbd> switch to choose whether it is a percentage or a fixed amount taken off this item.</li>
+      <li><strong>Tax (optional).</strong> Your saved rate is already filled in. Tap <kbd>TAX</kbd> to change it for this item.</li>
+      <li>Press the green <kbd>=</kbd> key. The item flies into <strong>Current Sale</strong>. Repeat for the next item.</li>
+    </ol>
+    <figure>
+      <img src="guide-img/4-current-sale.jpg" alt="Current sale list with two items and the totals" loading="lazy">
+      <figcaption>Current Sale, with Subtotal, Total Tax and Grand Total (and the total in words).</figcaption>
+    </figure>
+    <h3>Fixing mistakes</h3>
+    <ul>
+      <li><strong>Change an item:</strong> tap its row, change the numbers, then press <kbd>=</kbd> to update it. (Tap <kbd>cancel</kbd> to leave it unchanged.)</li>
+      <li><strong>Remove an item:</strong> tap the <kbd>&times;</kbd> at the end of its row.</li>
+      <li><strong>Undo</strong> removes the last item added. <kbd>CE</kbd> clears what you are typing. <kbd>AC</kbd> clears the whole sale.</li>
+    </ul>
+    <h3>Overall discount</h3>
+    <p>To take a fixed amount off the whole bill (for example a coupon), type it in the <strong>Overall Discount</strong> box below the list. It cannot make the total negative.</p>
+  </section>
+
+  <section id="save">
+    <h2><span class="n">4</span>Save the sale</h2>
+    <p>When the customer has paid, tap the green <kbd>Save sale</kbd> button. The sale is recorded in your history and the screen clears, ready for the next customer.</p>
+    <figure>
+      <img src="guide-img/5-share.jpg" alt="Save sale and Share sale buttons with the share options open" loading="lazy">
+      <figcaption>Save sale (green) and Share sale (blue) sit under the totals.</figcaption>
+    </figure>
+    <div class="warn">A sale is only added to your history and daily totals when you tap <strong>Save sale</strong>. Share first if the customer wants the bill, then save.</div>
+  </section>
+
+  <section id="share">
+    <h2><span class="n">5</span>Share the bill</h2>
+    <p>Tap <kbd>Share sale</kbd> to open the options:</p>
+    <table>
+      <tr><th>Option</th><th>What it does</th></tr>
+      <tr><td><kbd>Email</kbd></td><td>Opens your email app with the bill written in the message.</td></tr>
+      <tr><td><kbd>WhatsApp</kbd></td><td>Opens WhatsApp with the bill ready to send to any chat.</td></tr>
+      <tr><td><kbd>Copy text</kbd></td><td>Copies the bill so you can paste it anywhere.</td></tr>
+      <tr><td><kbd>Share&hellip;</kbd></td><td>Sends the bill as a PDF file through any app on your phone.</td></tr>
+      <tr><td><kbd>Download PDF</kbd></td><td>Saves a neat itemised PDF bill with your shop name.</td></tr>
+    </table>
+  </section>
+
+  <section id="history">
+    <h2><span class="n">6</span>Sales history and reports</h2>
+    <p>Tap the <strong>clock icon</strong> next to the currency to see what you have saved.</p>
+    <figure>
+      <img src="guide-img/7-history.jpg" alt="Sales history screen with date range, totals and report buttons" loading="lazy">
+      <figcaption>History: pick dates, see daily totals, export a report.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Daily total:</strong> tap <kbd>Today</kbd> to see how many sales you made and the total.</li>
+      <li><strong>Any dates:</strong> set <kbd>From</kbd> and <kbd>To</kbd>, or use <kbd>Yesterday</kbd>, <kbd>Last 7 days</kbd>, <kbd>This month</kbd>, <kbd>All</kbd>.</li>
+      <li><strong>See the items in a sale:</strong> tap the sale in the list. You can delete a wrong entry there.</li>
+      <li><strong>Reports:</strong> <kbd>PDF report</kbd> and <kbd>Excel report</kbd> cover the dates you chose, with daily totals and every sale. The Excel file also lists every item sold. On a phone the file opens your share menu so you can send it or save it to Drive.</li>
+    </ul>
+    <div class="warn"><strong>History is kept for 2 months</strong> on this device, then older sales are removed automatically. It is not backed up, and clearing the browser data or removing the app deletes it. Export an Excel report regularly if you want permanent records.</div>
+  </section>
+
+  <section id="tips">
+    <h2><span class="n">7</span>Handy tips</h2>
+    <ul>
+      <li><strong>Repeat items are quick.</strong> Start typing a name you used before, pick it from the list, and the price, discount and tax are filled in for you.</li>
+      <li><strong>Just need a calculator?</strong> Tap <kbd>Calc</kbd> for a plain calculator.</li>
+      <li><strong>On a computer</strong> you can type numbers with the keyboard; <kbd>Enter</kbd> works like <kbd>=</kbd>.</li>
+      <li><strong>Big amounts:</strong> the display handles up to 8 digits (99,999,999). Anything bigger shows an error message.</li>
+      <li><strong>Switching currency</strong> only affects new sales. History and reports show one currency at a time, and tell you if sales in another currency exist.</li>
+      <li><strong>Your data is private.</strong> Nothing is sent to us or anyone else. Shop name, items and history live only on your device.</li>
+    </ul>
+  </section>
+
+  <section id="faq">
+    <h2><span class="n">8</span>Questions</h2>
+    <details><summary>The item will not add when I press =</summary>
+      <p>Both <strong>Qty</strong> and <strong>Price</strong> must be greater than zero. A message under the keypad tells you what is missing.</p></details>
+    <details><summary>My history is empty</summary>
+      <p>Sales appear only after you tap <strong>Save sale</strong>. Also check the dates at the top, and that the currency matches the one you sold in.</p></details>
+    <details><summary>The Excel or PDF report says "No sales in this date range"</summary>
+      <p>Widen the dates (try <kbd>All</kbd>) and check the currency selected in the app.</p></details>
+    <details><summary>Does it work without internet?</summary>
+      <p>Yes. Once it has opened one time online, everything works offline, including PDF and Excel reports.</p></details>
+    <details><summary>I changed phones. Where did my sales go?</summary>
+      <p>Data stays on the device where it was entered. Export an Excel report before changing phones to keep your records.</p></details>
+    <details><summary>The app looks out of date</summary>
+      <p>Close it fully and open it again while online. It updates itself the next time it connects.</p></details>
+  </section>
+</main>
+
+<footer>Shop Calculator &middot; POS. BILLING. SALES. &middot; by bconnTech &middot; <a href="privacy.html">Privacy policy</a></footer>
+</body>
+</html>
