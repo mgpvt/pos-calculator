@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Shop Calculator</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Shop Calculator - POS. BILLING. SALES.">
@@ -923,6 +924,106 @@
   }
   .share__note:empty { display: none; }
 
+  /* ---- Save sale + History ---- */
+  .share__row { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+  .share__row .share__toggle { margin: 0; }
+  .share__save {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--success) 82%, #fff), var(--success));
+    box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--success) 80%, transparent);
+  }
+  .app[data-mode="calc"] .histbtn { display: none; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+    z-index: 1200; max-width: 90vw;
+    padding: 9px 16px; border-radius: 10px;
+    background: var(--navy); color: var(--on-navy);
+    font-size: 0.8rem; font-weight: 600; text-align: center;
+    box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.5);
+  }
+  .toast[hidden] { display: none; }
+
+  .hist {
+    position: fixed; inset: 0; z-index: 1000;
+    display: flex; align-items: flex-end; justify-content: center;
+    background: rgba(10, 16, 40, 0.55);
+  }
+  .hist[hidden] { display: none; }
+  .hist__sheet {
+    width: 100%; max-width: 560px;
+    max-height: 94vh; max-height: 94dvh;
+    display: flex; flex-direction: column;
+    background: var(--ground); color: var(--ink);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -10px 40px -12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+  }
+  @media (min-width: 761px) {
+    .hist { align-items: center; }
+    .hist__sheet { border-radius: 16px; max-height: 88vh; }
+  }
+  .hist__head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--navy); color: var(--on-navy);
+  }
+  .hist__head h2 { margin: 0; font-size: 1rem; font-weight: 700; letter-spacing: 0.03em; }
+  .hist__x {
+    width: 30px; height: 30px; border-radius: 8px;
+    font-size: 1.3rem; line-height: 1; color: var(--on-navy);
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .hist__body { flex: 1; overflow: auto; padding: 12px 14px; -webkit-overflow-scrolling: touch; }
+  .hist__range { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .hist__range label { display: block; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-dim); }
+  .hist__range input {
+    display: block; width: 100%; height: 36px; margin-top: 3px; padding: 0 8px;
+    border: 1px solid var(--line-strong); border-radius: 8px;
+    background: var(--card); color: var(--ink); font: inherit; font-size: 0.86rem;
+  }
+  .hist__chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 9px 0 12px; }
+  .hist__chip {
+    height: 28px; padding: 0 11px; border-radius: 14px;
+    font-size: 0.72rem; font-weight: 600;
+    color: var(--ink); background: var(--card); border: 1px solid var(--line-strong);
+  }
+  .hist__chip:hover { border-color: var(--c-qty); }
+  .hist__cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .hist__card { padding: 8px 10px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); min-width: 0; }
+  .hist__card span { display: block; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-dim); }
+  .hist__card b { display: block; margin-top: 2px; font-size: 0.9rem; overflow-wrap: anywhere; }
+  .hist__card--total b { color: var(--success); }
+  .hist__note { margin: 8px 0 0; font-size: 0.7rem; color: var(--ink-dim); }
+  .hist__note:empty { display: none; }
+  .hist h3 { margin: 16px 0 6px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-dim); }
+  .hist__list { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .hist__tr, .hist__sale > summary {
+    display: grid; grid-template-columns: minmax(0, 1fr) 4rem 6.5rem; gap: 6px; align-items: center;
+    padding: 7px 10px; font-size: 0.8rem; border-bottom: 1px solid var(--line);
+  }
+  .hist__tr:last-child, .hist__sale:last-child > summary { border-bottom: 0; }
+  .hist__tr span:nth-child(n+2), .hist__sale > summary span:nth-child(2), .hist__sale > summary b { text-align: right; }
+  .hist__tr--head { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-dim); background: var(--card-2); }
+  .hist__tr--sum { font-weight: 700; background: var(--card-2); }
+  .hist__sale > summary { cursor: pointer; list-style: none; }
+  .hist__sale > summary::-webkit-details-marker { display: none; }
+  .hist__sale[open] > summary { background: var(--card-2); }
+  .hist__lines { padding: 6px 10px 10px; font-size: 0.74rem; border-bottom: 1px solid var(--line); }
+  .hist__line { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+  .hist__line i { color: var(--ink-dim); font-style: normal; }
+  .hist__line--sum { margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--line-strong); font-weight: 700; }
+  .hist__del { margin-top: 8px; height: 28px; padding: 0 10px; border-radius: 7px; font-size: 0.7rem; font-weight: 600; color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--line-strong)); background: transparent; }
+  .hist__empty { padding: 14px 10px; text-align: center; font-size: 0.78rem; color: var(--ink-dim); }
+  .hist__foot {
+    display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: var(--card); border-top: 1px solid var(--line);
+  }
+  .hist__btn { height: 38px; padding: 0 14px; border-radius: 9px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; color: #fff; background: var(--c-qty); }
+  .hist__btn--xls { background: var(--success); }
+  .hist__btn--clear { color: var(--danger); background: transparent; border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--line-strong)); }
+  .hist__keep { grid-column: 1 / -1; margin: 0; font-size: 0.64rem; text-align: center; color: var(--ink-dim); }
+
   /* ============ Calculator-only mode ============ */
   .app[data-mode="calc"] .panel-sale,
   .app[data-mode="calc"] .salelist,
@@ -1054,6 +1155,11 @@
       placeholder="Enter shop name" autocomplete="organization"
       aria-label="Shop name (saved on this device, shown on receipts)">
     <select id="currencySelect" class="currselect" aria-label="Currency (saved on this device)" title="Currency"></select>
+    <button class="sndbtn histbtn" id="histBtn" type="button" title="Sales history &amp; reports" aria-label="Sales history and reports">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l3 2"></path>
+      </svg>
+    </button>
     <button class="sndbtn" id="soundToggle" type="button" aria-pressed="true" title="Button click sounds">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M4 9v6h4l5 4V5L8 9H4z"></path>
@@ -1214,7 +1320,10 @@
   <p class="grand-words" data-role="grandWords" aria-live="polite"></p>
 
   <div class="share" data-role="share" hidden>
-    <button class="share__toggle" id="shareToggle" aria-expanded="false">Share sale &#9662;</button>
+    <div class="share__row">
+      <button class="share__toggle share__save" id="saveSale" type="button">Save sale</button>
+      <button class="share__toggle" id="shareToggle" aria-expanded="false">Share sale &#9662;</button>
+    </div>
     <div class="share__menu" id="shareMenu" hidden>
       <a class="share__opt" id="shOptEmail" href="#" target="_blank" rel="noopener">Email</a>
       <a class="share__opt" id="shOptWa" href="#" target="_blank" rel="noopener">WhatsApp</a>
@@ -1225,6 +1334,45 @@
     <p class="share__note" id="shareNote" role="status" aria-live="polite"></p>
   </div>
 </div>
+
+<div class="hist" id="hist" role="dialog" aria-modal="true" aria-labelledby="histTitle" hidden>
+  <div class="hist__sheet">
+    <div class="hist__head">
+      <h2 id="histTitle">Sales history</h2>
+      <button class="hist__x" id="histClose" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="hist__body">
+      <div class="hist__range">
+        <label>From<input type="date" id="histFrom"></label>
+        <label>To<input type="date" id="histTo"></label>
+      </div>
+      <div class="hist__chips">
+        <button class="hist__chip" type="button" data-range="today">Today</button>
+        <button class="hist__chip" type="button" data-range="yesterday">Yesterday</button>
+        <button class="hist__chip" type="button" data-range="week">Last 7 days</button>
+        <button class="hist__chip" type="button" data-range="month">This month</button>
+        <button class="hist__chip" type="button" data-range="all">All</button>
+      </div>
+      <div class="hist__cards">
+        <div class="hist__card"><span>Sales</span><b id="histCount">0</b></div>
+        <div class="hist__card"><span>Tax</span><b id="histTax">0.00</b></div>
+        <div class="hist__card hist__card--total"><span>Total</span><b id="histTotal">0.00</b></div>
+      </div>
+      <p class="hist__note" id="histNote"></p>
+      <h3>Daily totals</h3>
+      <div class="hist__list" id="histDaily"></div>
+      <h3>Sales</h3>
+      <div class="hist__list" id="histSales"></div>
+    </div>
+    <div class="hist__foot">
+      <button class="hist__btn" id="histPdf" type="button">PDF report</button>
+      <button class="hist__btn hist__btn--xls" id="histXls" type="button">Excel report</button>
+      <button class="hist__btn hist__btn--clear" id="histClear" type="button">Clear</button>
+      <p class="hist__keep">Sales are kept on this device for 2 months, then removed automatically.</p>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <datalist id="itemSuggestions"></datalist>
 <datalist id="unitSuggestions">
@@ -1237,6 +1385,7 @@
      (its own header/footer, showing the page URL) can ever appear in it. -->
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jspdf.plugin.autotable.min.js"></script>
+<script src="vendor/xlsx.mini.min.js"></script>
 <script>
   (function () {
     "use strict";
@@ -2441,6 +2590,7 @@
     document.addEventListener("keydown", function (e) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       var k = e.key;
+      if (histEl && !histEl.hidden) { if (k === "Escape") closeHistory(); return; }
       var ae = document.activeElement;
       if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
       if ((k === "Enter" || k === " ") && ae && ae.tagName === "BUTTON") return;
@@ -2453,6 +2603,441 @@
       else if (k === "%") { clickSound("ctrl"); percent(); }
       else return;
     });
+
+    /* ---------- Sales history (per device, last 2 months) ---------- */
+
+    var HISTORY_KEY = "bconntech.pos.history";
+    var HISTORY_MONTHS = 2;
+    var HISTORY_SHOW_MAX = 200;
+    var histCache = null;
+    var histEl = document.getElementById("hist");
+    var toastEl = document.getElementById("toast");
+    var toastTimer = null;
+
+    function toast(msg) {
+      if (!toastEl) return;
+      toastEl.textContent = msg;
+      toastEl.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { toastEl.hidden = true; }, 3000);
+    }
+    function r6(v) { return Math.round((+v || 0) * 1e6) / 1e6; }
+    function dateKey(ms) {
+      var d = new Date(ms);
+      return d.getFullYear() + "-" + padNum(d.getMonth() + 1, 2) + "-" + padNum(d.getDate(), 2);
+    }
+    function keyParts(k) { var p = String(k).split("-"); return [+p[0], +p[1] - 1, +p[2]]; }
+    function keyStart(k) { var p = keyParts(k); return new Date(p[0], p[1], p[2]).getTime(); }
+    function keyEnd(k) { var p = keyParts(k); return new Date(p[0], p[1], p[2] + 1).getTime(); }
+    function fmtDay(k) {
+      var p = keyParts(k);
+      try {
+        return new Date(p[0], p[1], p[2]).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+      } catch (e) { return k; }
+    }
+    function fmtClock(ms) {
+      var d = new Date(ms);
+      return padNum(d.getHours(), 2) + ":" + padNum(d.getMinutes(), 2);
+    }
+    function historyCutoff() {
+      var d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setMonth(d.getMonth() - HISTORY_MONTHS);
+      return d.getTime();
+    }
+
+    // Sales older than 2 months are dropped whenever the list is read.
+    function readHistory() {
+      if (histCache) return histCache;
+      var arr = [];
+      try { arr = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch (e) { arr = []; }
+      if (!Array.isArray(arr)) arr = [];
+      var cut = historyCutoff();
+      var kept = arr.filter(function (s) { return s && s.t >= cut && Array.isArray(s.i); });
+      kept.sort(function (a, b) { return a.t - b.t; });
+      histCache = kept;
+      if (kept.length !== arr.length) writeHistory(kept);
+      return histCache;
+    }
+    // Returns how many of the oldest sales had to be dropped to fit the device's storage
+    // quota, or -1 if it still couldn't be saved.
+    function writeHistory(arr) {
+      var dropped = 0;
+      for (;;) {
+        try {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(arr));
+          histCache = arr;
+          return dropped;
+        } catch (e) {
+          if (arr.length <= 1) { histCache = null; return -1; }
+          var n = Math.max(1, Math.ceil(arr.length * 0.1));
+          arr = arr.slice(n);
+          dropped += n;
+        }
+      }
+    }
+
+    // Compact on purpose: one array per line item keeps a typical sale to a few hundred bytes.
+    // item = [name, unit, qty, price, discount, discountIsAmount(0/1), tax%, subtotal, discountAmt, taxAmt, total]
+    function saleRecord() {
+      var s = saleSums();
+      var disc = 0;
+      sale.forEach(function (it) { disc += it.discountAmt; });
+      // Money is rounded to the currency's own decimals when saved, so what's on screen, in the PDF
+      // and in the Excel file always add up to the same cents.
+      var f = Math.pow(10, curDecimals());
+      function rd(v) { return Math.round((+v || 0) * f) / f; }
+      return {
+        t: Date.now(), c: currency,
+        s: rd(s.sub), d: rd(disc), x: rd(s.tax), o: rd(s.overallDiscountAmt), g: rd(s.grand),
+        i: sale.map(function (it) {
+          return [it.name.slice(0, 60), it.unit, it.qty, it.price, it.discount, it.discountType === "amt" ? 1 : 0,
+            it.tax, rd(it.subtotal), rd(it.discountAmt), rd(it.taxAmt), rd(it.total)];
+        })
+      };
+    }
+    function saveSale() {
+      if (!sale.length) return;
+      var rec = saleRecord();
+      var hist = readHistory().slice();
+      hist.push(rec);
+      var dropped = writeHistory(hist);
+      if (dropped < 0) { shareNote("Couldn't save — this device's storage is full. Open History and clear old sales."); return; }
+      var total = withSymbol(money(rec.g));
+      allClear();
+      confirmSound();
+      toast(dropped > 0
+        ? "Sale saved " + MIDDOT + " storage was nearly full, so the oldest " + dropped + " sales were removed."
+        : "Sale saved " + MIDDOT + " " + total);
+    }
+
+    /* ----- querying ----- */
+
+    function querySales(fromKey, toKey) {
+      var a = keyStart(fromKey), b = keyEnd(toKey);
+      var mine = [], other = 0;
+      readHistory().forEach(function (s) {
+        if (s.t < a || s.t >= b) return;
+        if ((s.c || DEFAULT_CURRENCY) === currency) mine.push(s); else other++;
+      });
+      return { sales: mine, other: other };
+    }
+    function totalsOf(sales) {
+      var t = { n: 0, s: 0, d: 0, x: 0, g: 0 };
+      sales.forEach(function (s) { t.n++; t.s += s.s; t.d += s.d + s.o; t.x += s.x; t.g += s.g; });
+      return t;
+    }
+    function dailyTotals(sales) {
+      var map = {};
+      sales.forEach(function (s) {
+        var k = dateKey(s.t);
+        var r = map[k] || (map[k] = { d: k, n: 0, s: 0, disc: 0, x: 0, g: 0 });
+        r.n++; r.s += s.s; r.disc += s.d + s.o; r.x += s.x; r.g += s.g;
+      });
+      return Object.keys(map).sort().map(function (k) { return map[k]; });
+    }
+    function histRange() {
+      var f = document.getElementById("histFrom").value || dateKey(Date.now());
+      var t = document.getElementById("histTo").value || f;
+      if (f > t) { var x = f; f = t; t = x; }
+      return { from: f, to: t };
+    }
+    function reportData() {
+      var r = histRange();
+      var q = querySales(r.from, r.to);
+      return { from: r.from, to: r.to, sales: q.sales, other: q.other, daily: dailyTotals(q.sales), tot: totalsOf(q.sales) };
+    }
+
+    /* ----- screen ----- */
+
+    function histLine(it) {
+      var tags = [];
+      if (it[4]) tags.push(it[5] ? MINUS + money(it[8]) : MINUS + trim(it[4]) + "%");
+      if (it[6]) tags.push("+" + trim(it[6]) + "% tax");
+      return '<div class="hist__line"><span>' + (it[0] ? '<b>' + escapeHtml(it[0]) + '</b> ' : '') +
+        trim(it[2]) + (it[1] ? ' ' + escapeHtml(it[1]) : '') + ' ' + TIMES + ' ' + money(it[3]) +
+        (tags.length ? ' <i>(' + tags.join(' ' + MIDDOT + ' ') + ')</i>' : '') +
+        '</span><span>' + money(it[10]) + '</span></div>';
+    }
+    function renderHistory() {
+      var R = reportData();
+      var t = R.tot;
+      document.getElementById("histCount").textContent = String(t.n);
+      document.getElementById("histTax").textContent = withSymbol(money(t.x));
+      document.getElementById("histTotal").textContent = withSymbol(money(t.g));
+
+      var note = "";
+      if (R.other > 0) {
+        note = R.other + (R.other === 1 ? " sale" : " sales") + " in other currencies " +
+          (R.other === 1 ? "isn't" : "aren't") + " included " + MIDDOT + " switch the currency to see " + (R.other === 1 ? "it" : "them") + ".";
+      } else if (!readHistory().length) {
+        note = "No saved sales yet. Tap “Save sale” after each sale to record it here.";
+      }
+      document.getElementById("histNote").textContent = note;
+
+      var dailyEl = document.getElementById("histDaily");
+      if (!R.daily.length) {
+        dailyEl.innerHTML = '<div class="hist__empty">No sales in this date range.</div>';
+      } else {
+        dailyEl.innerHTML =
+          '<div class="hist__tr hist__tr--head"><span>Date</span><span>Sales</span><span>Total (' + currency + ')</span></div>' +
+          R.daily.slice().reverse().map(function (r) {
+            return '<div class="hist__tr"><span>' + escapeHtml(fmtDay(r.d)) + '</span><span>' + r.n + '</span><span>' + money(r.g) + '</span></div>';
+          }).join("") +
+          '<div class="hist__tr hist__tr--sum"><span>Total</span><span>' + t.n + '</span><span>' + money(t.g) + '</span></div>';
+      }
+
+      var salesEl = document.getElementById("histSales");
+      if (!R.sales.length) {
+        salesEl.innerHTML = '<div class="hist__empty">Nothing to show.</div>';
+      } else {
+        var shown = R.sales.slice(-HISTORY_SHOW_MAX).reverse();
+        salesEl.innerHTML = shown.map(function (s) {
+          var d = new Date(s.t);
+          var when = d.toLocaleDateString(undefined, { day: "numeric", month: "short" }) + " " + fmtClock(s.t);
+          var n = s.i.length;
+          return '<details class="hist__sale"><summary><span>' + escapeHtml(when) + '</span><span>' + n + (n === 1 ? ' item' : ' items') +
+            '</span><b>' + money(s.g) + '</b></summary><div class="hist__lines">' +
+            s.i.map(histLine).join("") +
+            (s.o > 0 ? '<div class="hist__line hist__line--sum"><span>Overall discount</span><span>' + MINUS + money(s.o) + '</span></div>' : '') +
+            '<div class="hist__line' + (s.o > 0 ? '' : ' hist__line--sum') + '"><span>Total</span><span>' + withSymbol(money(s.g)) + '</span></div>' +
+            '<button class="hist__del" type="button" data-t="' + s.t + '">Delete this sale</button></div></details>';
+        }).join("");
+        if (R.sales.length > HISTORY_SHOW_MAX) {
+          salesEl.innerHTML += '<div class="hist__empty">Showing the latest ' + HISTORY_SHOW_MAX + ' of ' + R.sales.length + ' sales. Reports include all of them.</div>';
+        }
+      }
+    }
+    function setRange(kind) {
+      var now = new Date();
+      var today = dateKey(now.getTime());
+      var from = today, to = today;
+      if (kind === "yesterday") { from = to = dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).getTime()); }
+      else if (kind === "week") { from = dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6).getTime()); }
+      else if (kind === "month") { from = dateKey(new Date(now.getFullYear(), now.getMonth(), 1).getTime()); }
+      else if (kind === "all") { from = dateKey(historyCutoff()); }
+      document.getElementById("histFrom").value = from;
+      document.getElementById("histTo").value = to;
+      renderHistory();
+    }
+    function openHistory() {
+      if (!histEl) return;
+      histEl.hidden = false;
+      document.body.style.overflow = "hidden";
+      setRange("today");
+      document.getElementById("histClose").focus();
+    }
+    function closeHistory() {
+      if (!histEl) return;
+      histEl.hidden = true;
+      document.body.style.overflow = "";
+    }
+
+    /* ----- reports ----- */
+
+    function fileStem(from, to) {
+      var shop = (shopTitle() || "Shop").replace(/[^\w-]+/g, "_").replace(/^_+|_+$/g, "") || "Shop";
+      return shop + "_sales_" + from + (to !== from ? "_to_" + to : "");
+    }
+    // Phones/tablets: hand the file to the share sheet (WhatsApp, Email, Drive...). Elsewhere: plain download.
+    function deliverFile(blob, filename, mime, title) {
+      var file = null;
+      try { file = new File([blob], filename, { type: mime }); } catch (e) {}
+      if (file && narrowMq.matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: title }).catch(function () {});
+        return;
+      }
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+    }
+
+    function buildHistoryPdf(R) {
+      if (!window.jspdf || !window.jspdf.jsPDF) return null;
+      var doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+      var margin = 14;
+      var t = R.tot;
+
+      doc.setFont(undefined, "bold");
+      doc.setFontSize(16);
+      doc.text(shopTitle(), margin, 18);
+      doc.setFontSize(11);
+      doc.text("Sales Report", margin, 25);
+      doc.setFont(undefined, "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(90);
+      doc.text("From " + fmtDay(R.from) + "  to  " + fmtDay(R.to) + "   |   Currency: " + currency, margin, 31);
+      doc.text("Generated " + fmtWhen(), margin, 36);
+      doc.setTextColor(0);
+
+      var common = {
+        margin: { left: margin, right: margin },
+        theme: "plain",
+        styles: { fontSize: 9, cellPadding: 2, lineColor: [220, 220, 220], lineWidth: 0.1 },
+        headStyles: { fontStyle: "bold", textColor: [20, 30, 80], lineWidth: { bottom: 0.3 }, lineColor: [0, 0, 0] },
+        footStyles: { fontStyle: "bold", textColor: [0, 0, 0], lineWidth: { top: 0.3 }, lineColor: [0, 0, 0] }
+      };
+      var right = { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } };
+      var moneyHead = ["Subtotal (" + currency + ")", "Discount", "Tax", "Total (" + currency + ")"];
+      function section(title) {
+        var y = doc.lastAutoTable.finalY + 9;
+        if (y > 262) { doc.addPage(); y = 18; }
+        doc.setFont(undefined, "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(20, 30, 80);
+        doc.text(title, margin, y);
+        doc.setTextColor(0);
+        return y + 3;
+      }
+
+      doc.autoTable(Object.assign({}, common, {
+        startY: 41,
+        head: [["Sales", "Subtotal (" + currency + ")", "Discount", "Tax", "Total (" + currency + ")"]],
+        body: [[String(t.n), money(t.s), money(t.d), money(t.x), money(t.g)]],
+        columnStyles: { 0: { halign: "left" }, 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } }
+      }));
+
+      var y1 = section("Daily totals");
+      doc.autoTable(Object.assign({}, common, {
+        startY: y1,
+        head: [["Date", "Sales"].concat(moneyHead)],
+        body: R.daily.map(function (r) { return [fmtDay(r.d), String(r.n), money(r.s), money(r.disc), money(r.x), money(r.g)]; }),
+        foot: [["Total", String(t.n), money(t.s), money(t.d), money(t.x), money(t.g)]],
+        columnStyles: right
+      }));
+
+      var y2 = section("Sales");
+      doc.autoTable(Object.assign({}, common, {
+        startY: y2,
+        head: [["Date & time", "Items"].concat(moneyHead)],
+        body: R.sales.slice().reverse().map(function (s) {
+          return [dateKey(s.t) + "  " + fmtClock(s.t), String(s.i.length), money(s.s), money(s.d + s.o), money(s.x), money(s.g)];
+        }),
+        columnStyles: right
+      }));
+
+      var pages = doc.getNumberOfPages();
+      for (var p = 1; p <= pages; p++) {
+        doc.setPage(p);
+        doc.setFont(undefined, "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(130);
+        doc.text("Generated by Shop Calculator", margin, 290);
+        doc.text("Page " + p + " of " + pages, 196, 290, { align: "right" });
+      }
+      return doc;
+    }
+
+    function buildHistoryXlsx(R) {
+      if (!window.XLSX) return null;
+      var X = window.XLSX;
+      var d = curDecimals();
+      var fmt = d ? "#,##0." + new Array(d + 1).join("0") : "#,##0";
+      var t = R.tot;
+      var sorted = R.sales.slice().sort(function (a, b) { return a.t - b.t; });
+      function sheet(rows, widths, moneyCols) {
+        var ws = X.utils.aoa_to_sheet(rows);
+        ws["!cols"] = widths.map(function (w) { return { wch: w }; });
+        for (var r = 1; r < rows.length; r++) {
+          moneyCols.forEach(function (c) {
+            var cell = ws[X.utils.encode_cell({ r: r, c: c })];
+            if (cell && cell.t === "n") cell.z = fmt;
+          });
+        }
+        return ws;
+      }
+
+      var wb = X.utils.book_new();
+      var summary = [
+        [shopTitle()], ["Sales Report"], [],
+        ["From", R.from], ["To", R.to], ["Currency", currency], ["Generated", fmtWhen()], [],
+        ["Sales", t.n], ["Subtotal", r6(t.s)], ["Discount", r6(t.d)], ["Tax", r6(t.x)], ["Total", r6(t.g)]
+      ];
+      var ws0 = X.utils.aoa_to_sheet(summary);
+      ws0["!cols"] = [{ wch: 14 }, { wch: 24 }];
+      [9, 10, 11, 12].forEach(function (r) { var c = ws0[X.utils.encode_cell({ r: r, c: 1 })]; if (c) c.z = fmt; });
+      X.utils.book_append_sheet(wb, ws0, "Summary");
+
+      var daily = [["Date", "Sales", "Subtotal", "Discount", "Tax", "Total"]];
+      R.daily.forEach(function (r) { daily.push([r.d, r.n, r6(r.s), r6(r.disc), r6(r.x), r6(r.g)]); });
+      daily.push(["Total", t.n, r6(t.s), r6(t.d), r6(t.x), r6(t.g)]);
+      X.utils.book_append_sheet(wb, sheet(daily, [14, 8, 14, 12, 12, 14], [2, 3, 4, 5]), "Daily totals");
+
+      var sales = [["Sale #", "Date", "Time", "Items", "Subtotal", "Item discounts", "Overall discount", "Tax", "Total"]];
+      sorted.forEach(function (s, i) {
+        sales.push([i + 1, dateKey(s.t), fmtClock(s.t), s.i.length, r6(s.s), r6(s.d), r6(s.o), r6(s.x), r6(s.g)]);
+      });
+      X.utils.book_append_sheet(wb, sheet(sales, [8, 12, 8, 7, 14, 14, 16, 12, 14], [4, 5, 6, 7, 8]), "Sales");
+
+      var items = [["Sale #", "Date", "Time", "Item", "Qty", "Unit", "Unit price", "Discount", "Discount type", "Tax %", "Subtotal", "Discount amount", "Tax amount", "Total"]];
+      sorted.forEach(function (s, i) {
+        s.i.forEach(function (it) {
+          items.push([i + 1, dateKey(s.t), fmtClock(s.t), it[0] || "NA", it[2], it[1], it[3], it[4], it[5] ? "Amount" : "%", it[6],
+            it[7], it[8], it[9], it[10]]);
+        });
+      });
+      X.utils.book_append_sheet(wb, sheet(items, [8, 12, 8, 24, 8, 8, 12, 10, 14, 8, 14, 16, 12, 14], [6, 10, 11, 12, 13]), "Items");
+
+      var out = X.write(wb, { bookType: "xlsx", type: "array" });
+      return new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    }
+
+    function exportReport(kind) {
+      var R = reportData();
+      if (!R.sales.length) { toast("No sales in this date range."); return; }
+      var stem = fileStem(R.from, R.to);
+      if (kind === "pdf") {
+        var doc = buildHistoryPdf(R);
+        if (!doc) { toast("The PDF library didn't load — reload the app and try again."); return; }
+        deliverFile(doc.output("blob"), stem + ".pdf", "application/pdf", shopTitle() + " sales report");
+      } else {
+        var blob = buildHistoryXlsx(R);
+        if (!blob) { toast("The Excel library didn't load — reload the app and try again."); return; }
+        deliverFile(blob, stem + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", shopTitle() + " sales report");
+      }
+    }
+
+    (function wireHistory() {
+      var open = document.getElementById("histBtn");
+      if (open) open.addEventListener("click", function () { clickSound("ctrl"); openHistory(); });
+      var save = document.getElementById("saveSale");
+      if (save) save.addEventListener("click", function () { clickSound("ctrl"); saveSale(); });
+      if (!histEl) return;
+      document.getElementById("histClose").addEventListener("click", closeHistory);
+      histEl.addEventListener("click", function (e) { if (e.target === histEl) closeHistory(); });
+      ["histFrom", "histTo"].forEach(function (id) {
+        document.getElementById(id).addEventListener("change", function () {
+          var r = histRange();
+          document.getElementById("histFrom").value = r.from;
+          document.getElementById("histTo").value = r.to;
+          renderHistory();
+        });
+      });
+      histEl.querySelectorAll("[data-range]").forEach(function (b) {
+        b.addEventListener("click", function () { setRange(b.dataset.range); });
+      });
+      document.getElementById("histPdf").addEventListener("click", function () { exportReport("pdf"); });
+      document.getElementById("histXls").addEventListener("click", function () { exportReport("xlsx"); });
+      document.getElementById("histSales").addEventListener("click", function (e) {
+        var btn = e.target.closest(".hist__del");
+        if (!btn) return;
+        if (!window.confirm("Delete this sale from your history? This can't be undone.")) return;
+        var t = +btn.dataset.t;
+        writeHistory(readHistory().filter(function (s) { return s.t !== t; }));
+        renderHistory();
+      });
+      document.getElementById("histClear").addEventListener("click", function () {
+        var n = readHistory().length;
+        if (!n) { toast("History is already empty."); return; }
+        if (!window.confirm("Delete ALL " + n + " saved sales from this device? This can't be undone.")) return;
+        writeHistory([]);
+        renderHistory();
+      });
+      readHistory(); // prune anything older than 2 months at start-up
+    })();
 
     /* ---------- Go ---------- */
 

@@ -712,3 +712,28 @@ curl -s -o /dev/null -w "%{http_code}\n" -L https://mgpvt.github.io/pos-calculat
 ```
 
 **No env vars, no secrets, nothing to install.**
+
+## 14. Update (2026-11-07): rebrand, installable app, sales history
+
+- **Rebrand:** the app is now **Shop Calculator**, tagline "POS. BILLING. SALES.", developer
+  bconnTech. Icons in `icons/` are made from `bconntech_logo.png` (rounded, full-bleed, padded
+  maskable, Apple touch, 1024 store icon). The user does not want Claude mentioned anywhere in
+  shipped files or commits (no Co-Authored-By trailer, no "generated with" lines).
+- **Installable/offline (PWA):** `manifest.webmanifest`, `sw.js` (cache-first; **bump `CACHE` in
+  `sw.js` whenever any cached file changes**, and add new files to its `FILES` list), registered
+  at the end of the page script on http(s) only. jsPDF, jspdf-autotable, SheetJS
+  (`vendor/xlsx.mini.min.js`) and the Inter / JetBrains Mono fonts are bundled in `vendor/` — no
+  CDN dependency any more. The page has `<meta charset="utf-8">` (needed when a server doesn't
+  declare UTF-8, e.g. a store-app wrapper).
+- **Sales history:** a **Save sale** button (next to Share sale) stores the sale and runs
+  `allClear()`; the clock button in the shop bar opens the History sheet (date range, daily totals,
+  per-sale detail, delete/clear, PDF + Excel export). `localStorage` key
+  `bconntech.pos.history` = array of compact records `{t, c, s, d, x, o, g, i:[[name, unit, qty,
+  price, discount, discountIsAmount, tax%, subtotal, discountAmt, taxAmt, total], ...]}`; money is
+  rounded to the currency's decimals at save time. Records older than 2 months are pruned on read;
+  on a storage-quota failure the oldest 10% are dropped. Only sales in the current currency are
+  shown/exported. On widths <=760px the report is handed to the share sheet (`deliverFile()`),
+  elsewhere it downloads.
+- **Not done yet:** Play Store / App Store packaging (Capacitor plan: Android first; iOS needs a
+  Mac or cloud build service and a $99/yr Apple account). Capacitor's WebView would need
+  `deliverFile()`/PDF saving re-tested.

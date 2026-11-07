@@ -30,6 +30,11 @@ After the first load it runs fully offline.
 - **Currency** — pick from 15 codes; decimals and the symbol/code follow your choice.
 - **Share a receipt** — Email, WhatsApp, copy as text, the OS share sheet, or **Download PDF**
   (a proper itemised PDF receipt, generated on the device).
+- **Sales history** — tap **Save sale** to record a finished sale and start a new one. Open the
+  clock icon next to the currency to see saved sales, **daily totals**, and any **from / to date
+  range** (Today, Yesterday, Last 7 days, This month, All). Export that range as a **PDF** or an
+  **Excel** file (Summary, Daily totals, Sales and Items sheets). Sales are kept on the device for
+  2 months and older ones are removed automatically.
 - Tax % is remembered between sessions (kept through *AC* unless set to 0). Shop name, mode,
   sound and currency are remembered per device.
 - Light/dark aware, keyboard support, synthesised key-click / confirm sounds (toggleable).
@@ -40,7 +45,7 @@ After the first load it runs fully offline.
 |---|---|
 | `index.html` / `pos-calculator.html` | the Shop Calculator app (byte-identical) |
 | `manifest.webmanifest`, `sw.js`, `icons/` | installable-app setup (home-screen icon, offline cache) |
-| `vendor/` | bundled PDF library and fonts, so nothing loads from the internet |
+| `vendor/` | bundled PDF and Excel libraries and fonts, so nothing loads from the internet |
 | `calculator.html` | the earlier standalone pocket calculator |
 
 All data stays on the device (nothing is sent anywhere).
