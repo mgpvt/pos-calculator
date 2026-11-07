@@ -7,7 +7,7 @@
 **Category:** Business  (alternative: Finance)
 **Tags:** billing, POS, invoice, sales, calculator
 **Privacy policy URL:** https://mgpvt.github.io/pos-calculator/privacy.html
-**Contact email:** (add yours in the Play Console and in privacy.html)
+**Contact email:** bconntech26@gmail.com  (also shown on the privacy page)
 
 ## Full description (max 4000)
 
