@@ -35,17 +35,17 @@ No account, no ads, no tracking. Your sales and prices stay on your phone. Sales
 
 Made by bconnTech.
 
-## Screenshots to upload (phone, 9:16, at least 2; recommended 4–8)
-1. Calculator mode
-2. Sales mode with a few items in Current Sale
-3. Summary and grand total in words
-4. Share menu (PDF / WhatsApp / Email)
-5. Sales history with daily totals
-6. Report export (PDF / Excel)
-
-## Store graphics needed
-- App icon 512×512 PNG: `icons/icon-512.png`
-- Feature graphic 1024×500 PNG (to create)
+## Graphics (ready, in `store/graphics/`)
+- **Feature graphic 1024x500:** `feature-graphic.png`
+- **Phone screenshots 1080x1920 (9:16):** `phone-1.png` ... `phone-5.png`, in this order:
+  1. Ring up sales in seconds
+  2. Totals that always add up
+  3. Share the bill your way
+  4. Daily totals at a glance
+  5. Reports in PDF or Excel
+- **App icon 512x512:** `../../icons/icon-512.png`
+- To change the text or order, edit and run `store/src/build_graphics.py` (screens are in `store/src/raw/`).
+- The screenshots use sample data (a store called "Green Valley Store"), not real customers.
 
 ## Content rating / data safety answers
 - Data collected: **none**. Data shared: **none**.
