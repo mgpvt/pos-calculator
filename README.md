@@ -32,6 +32,8 @@ After the first load it runs fully offline.
 - **Currency** — pick from 15 codes; decimals and the symbol/code follow your choice.
 - **Share a receipt** — Email, WhatsApp, copy as text, the OS share sheet, or **Download PDF**
   (a proper itemised PDF receipt, generated on the device).
+- **Shop details (optional)** — add your logo, address, phone and tax / registration number (card icon
+  next to the currency). They print at the top of PDF bills, shared text bills, and the PDF and Excel reports.
 - **Sales history** — tap **Save sale** to record a finished sale and start a new one. Open the
   clock icon next to the currency to see saved sales, **daily totals**, and any **from / to date
   range** (Today, Yesterday, Last 7 days, This month, All). Export that range as a **PDF** or an

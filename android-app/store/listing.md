@@ -25,6 +25,7 @@ WHAT YOU CAN DO
 • 15 currencies, with the right number of decimals for each
 • Remembers your recent and most-used items and fills in the price for you
 • Share the bill as a PDF, or send it by WhatsApp or Email
+• Put your logo, address, phone and tax number on every bill and report (all optional)
 • Save every sale and see daily totals
 • Choose any from–to date range and export a PDF or Excel report
 • Works fully offline; light and dark themes

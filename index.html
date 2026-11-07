@@ -1024,6 +1024,23 @@
   .hist__btn--clear { color: var(--danger); background: transparent; border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--line-strong)); }
   .hist__keep { grid-column: 1 / -1; margin: 0; font-size: 0.64rem; text-align: center; color: var(--ink-dim); }
 
+  /* ---- Shop details (optional logo, address, phone, tax no.) ---- */
+  .fld { display: block; margin: 0 0 12px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-dim); }
+  .fld input[type="text"], .fld input[type="tel"], .fld textarea {
+    display: block; width: 100%; margin-top: 3px; padding: 8px 10px;
+    border: 1px solid var(--line-strong); border-radius: 8px;
+    background: var(--card); color: var(--ink);
+    font: inherit; font-size: 0.9rem; letter-spacing: 0; text-transform: none; font-weight: 500;
+  }
+  .fld textarea { resize: vertical; min-height: 66px; }
+  .fld input:focus, .fld textarea:focus { outline: none; border-color: var(--c-qty); }
+  .logo-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .logo-row img { max-width: 96px; max-height: 64px; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
+  .logo-row img[hidden], .logo-row button[hidden] { display: none; }
+  .logo-pick { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; letter-spacing: 0.04em; text-transform: none; }
+  .logo-row .hist__btn { height: 36px; font-size: 0.74rem; }
+  .shopdlg__hint { margin: 0 0 14px; font-size: 0.78rem; color: var(--ink-dim); }
+
   /* ============ Calculator-only mode ============ */
   .app[data-mode="calc"] .panel-sale,
   .app[data-mode="calc"] .salelist,
@@ -1154,6 +1171,11 @@
     <input id="shopName" class="shopbar__input" type="text" maxlength="42"
       placeholder="Enter shop name" autocomplete="organization"
       aria-label="Shop name (saved on this device, shown on receipts)">
+    <button class="sndbtn histbtn" id="shopInfoBtn" type="button" title="Shop details for bills (logo, address, phone)" aria-label="Shop details for bills">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="9" cy="11" r="2"></circle><path d="M6 16c.6-1.5 1.8-2.2 3-2.2s2.4.7 3 2.2M14 10h4M14 13h3"></path>
+      </svg>
+    </button>
     <select id="currencySelect" class="currselect" aria-label="Currency (saved on this device)" title="Currency"></select>
     <button class="sndbtn histbtn" id="histBtn" type="button" title="Sales history &amp; reports" aria-label="Sales history and reports">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1369,6 +1391,37 @@
       <button class="hist__btn hist__btn--xls" id="histXls" type="button">Excel report</button>
       <button class="hist__btn hist__btn--clear" id="histClear" type="button">Clear</button>
       <p class="hist__keep">Sales are kept on this device for 2 months, then removed automatically.</p>
+    </div>
+  </div>
+</div>
+<div class="hist" id="shopdlg" role="dialog" aria-modal="true" aria-labelledby="shopdlgTitle" hidden>
+  <div class="hist__sheet">
+    <div class="hist__head">
+      <h2 id="shopdlgTitle">Shop details</h2>
+      <button class="hist__x" id="shopdlgClose" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="hist__body">
+      <p class="shopdlg__hint">All optional. Whatever you fill in is printed at the top of your bills, receipts and reports. It stays on this device. The shop name is set in the bar above the calculator.</p>
+      <label class="fld">Address (up to 3 lines)
+        <textarea id="siAddr" rows="3" maxlength="200" placeholder="Street, area&#10;City, postcode"></textarea>
+      </label>
+      <label class="fld">Phone
+        <input id="siPhone" type="tel" maxlength="30" placeholder="+1 555 0100" autocomplete="off">
+      </label>
+      <label class="fld">Tax / registration no. (GST, VAT...)
+        <input id="siTax" type="text" maxlength="30" autocomplete="off">
+      </label>
+      <div class="fld">Logo
+        <div class="logo-row">
+          <img id="siLogoPrev" alt="Logo preview" hidden>
+          <label class="hist__btn logo-pick">Choose logo<input id="siLogoFile" type="file" accept="image/*" hidden></label>
+          <button class="hist__btn hist__btn--clear" id="siLogoRemove" type="button" hidden>Remove</button>
+        </div>
+      </div>
+    </div>
+    <div class="hist__foot" style="grid-template-columns: 1fr 1fr;">
+      <button class="hist__btn hist__btn--clear" id="siCancel" type="button">Cancel</button>
+      <button class="hist__btn hist__btn--xls" id="siSave" type="button">Save</button>
     </div>
   </div>
 </div>
@@ -2242,6 +2295,7 @@
       var numbered = sale.length > 1;
       var L = [];
       L.push(shopTitle().toUpperCase());
+      infoLines(readShopInfo()).forEach(function (l) { L.push(l); });
       L.push("Sale Receipt " + MIDDOT + " " + fmtWhen());
       L.push(rule);
       sale.forEach(function (it, i) {
@@ -2280,14 +2334,12 @@
       var doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
       var margin = 14;
 
-      doc.setFont(undefined, "bold");
-      doc.setFontSize(16);
-      doc.text(shopTitle(), margin, 18);
+      var hy = pdfShopHeader(doc, margin);
 
       doc.setFont(undefined, "normal");
       doc.setFontSize(9);
       doc.setTextColor(90);
-      doc.text("Sale Receipt " + MIDDOT + " " + fmtWhen(), margin, 25);
+      doc.text("Sale Receipt " + MIDDOT + " " + fmtWhen(), margin, hy + 7);
       doc.setTextColor(0);
 
       // Currency only appears on the Grand Total line and in the money columns' own headings —
@@ -2318,7 +2370,7 @@
       footRows.push([{ content: "Grand Total", colSpan: 6 }, currency + " " + money(s.grand)]);
 
       doc.autoTable({
-        startY: 30,
+        startY: hy + 12,
         margin: { left: margin, right: margin },
         theme: "plain",
         styles: { fontSize: 9, cellPadding: 2, lineColor: [220, 220, 220], lineWidth: 0.1 },
@@ -2592,6 +2644,7 @@
     document.addEventListener("keydown", function (e) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       var k = e.key;
+      if (shopDlgEl && !shopDlgEl.hidden) { if (k === "Escape") closeShopDlg(); return; }
       if (histEl && !histEl.hidden) { if (k === "Escape") closeHistory(); return; }
       var ae = document.activeElement;
       if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
@@ -2605,6 +2658,145 @@
       else if (k === "%") { clickSound("ctrl"); percent(); }
       else return;
     });
+
+    /* ---------- Shop details (optional): logo, address, phone, tax no. ---------- */
+
+    var SHOPINFO_KEY = "bconntech.pos.shopinfo", LOGO_KEY = "bconntech.pos.logo";
+    var shopDlgEl = document.getElementById("shopdlg");
+    var pendingLogo = null;   // null = unchanged, "" = removed, data URL = newly chosen
+
+    function readShopInfo() {
+      var o = {};
+      try { o = JSON.parse(localStorage.getItem(SHOPINFO_KEY) || "{}") || {}; } catch (e) { o = {}; }
+      return { addr: String(o.addr || "").slice(0, 200), phone: String(o.phone || "").slice(0, 30), tax: String(o.tax || "").slice(0, 30) };
+    }
+    function readLogo() {
+      try {
+        var d = localStorage.getItem(LOGO_KEY) || "";
+        return /^data:image\/(png|jpeg);base64,/.test(d) ? d : "";
+      } catch (e) { return ""; }
+    }
+    // The printed lines under the shop name; empty when nothing is filled in.
+    function infoLines(info) {
+      var L = [];
+      String(info.addr || "").split(/\r?\n/).forEach(function (s) { s = s.trim(); if (s) L.push(s); });
+      if (info.phone) L.push("Tel: " + info.phone);
+      if (info.tax) L.push("Tax no: " + info.tax);
+      return L;
+    }
+    // Draws logo + shop name + details at the top of a PDF page. Returns the y (mm) of the last
+    // header line, so callers can carry on below it. With nothing filled in it draws just the shop
+    // name at y=18, exactly as before.
+    function pdfShopHeader(doc, margin) {
+      var logo = readLogo(), x = margin, logoBottom = 0;
+      if (logo) {
+        try {
+          var props = doc.getImageProperties(logo);
+          var h = 18, w = h * props.width / props.height;
+          if (w > 38) { w = 38; h = w * props.height / props.width; }
+          doc.addImage(logo, props.fileType, margin, 8, w, h);
+          x = margin + w + 5;
+          logoBottom = 8 + h;
+        } catch (e) { x = margin; }
+      }
+      doc.setFont(undefined, "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(0);
+      doc.text(shopTitle(), x, 18);
+      var y = 18;
+      doc.setFont(undefined, "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(90);
+      infoLines(readShopInfo()).forEach(function (ln) {
+        doc.splitTextToSize(ln, 182 - (x - margin)).forEach(function (part) { y += 4.2; doc.text(part, x, y); });
+      });
+      doc.setTextColor(0);
+      return Math.max(y, logoBottom);
+    }
+
+    function resizeLogo(file, cb) {
+      var fr = new FileReader();
+      fr.onerror = function () { cb(null); };
+      fr.onload = function () {
+        var img = new Image();
+        img.onerror = function () { cb(null); };
+        img.onload = function () {
+          var s = Math.min(1, 300 / Math.max(img.width, img.height, 1));
+          var w = Math.max(1, Math.round(img.width * s)), h = Math.max(1, Math.round(img.height * s));
+          var c = document.createElement("canvas");
+          c.width = w; c.height = h;
+          var g = c.getContext("2d");
+          g.drawImage(img, 0, 0, w, h);
+          var out = c.toDataURL("image/png");
+          if (out.length > 90000) {            // a photo: JPEG on white is much smaller
+            g.fillStyle = "#fff"; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h);
+            out = c.toDataURL("image/jpeg", 0.85);
+          }
+          cb(out);
+        };
+        img.src = String(fr.result);
+      };
+      fr.readAsDataURL(file);
+    }
+    function showLogoPreview(data) {
+      var prev = document.getElementById("siLogoPrev");
+      prev.hidden = !data;
+      if (data) prev.src = data;
+      document.getElementById("siLogoRemove").hidden = !data;
+    }
+    function openShopDlg() {
+      if (!shopDlgEl) return;
+      var info = readShopInfo();
+      document.getElementById("siAddr").value = info.addr;
+      document.getElementById("siPhone").value = info.phone;
+      document.getElementById("siTax").value = info.tax;
+      pendingLogo = null;
+      document.getElementById("siLogoFile").value = "";
+      showLogoPreview(readLogo());
+      shopDlgEl.hidden = false;
+      document.body.style.overflow = "hidden";
+      document.getElementById("siAddr").focus();
+    }
+    function closeShopDlg() {
+      if (!shopDlgEl) return;
+      shopDlgEl.hidden = true;
+      document.body.style.overflow = "";
+    }
+    function saveShopDlg() {
+      var addr = document.getElementById("siAddr").value.split(/\r?\n/).map(function (s) { return s.trim().slice(0, 70); })
+        .filter(Boolean).slice(0, 3).join("\n");
+      var info = { addr: addr, phone: document.getElementById("siPhone").value.trim(), tax: document.getElementById("siTax").value.trim() };
+      try {
+        localStorage.setItem(SHOPINFO_KEY, JSON.stringify(info));
+        if (pendingLogo === "") localStorage.removeItem(LOGO_KEY);
+        else if (pendingLogo) localStorage.setItem(LOGO_KEY, pendingLogo);
+      } catch (e) { toast("Couldn't save — this device's storage is full."); return; }
+      closeShopDlg();
+      toast("Shop details saved.");
+    }
+    (function wireShopDlg() {
+      var open = document.getElementById("shopInfoBtn");
+      if (open) open.addEventListener("click", function () { clickSound("ctrl"); openShopDlg(); });
+      if (!shopDlgEl) return;
+      document.getElementById("shopdlgClose").addEventListener("click", closeShopDlg);
+      document.getElementById("siCancel").addEventListener("click", closeShopDlg);
+      document.getElementById("siSave").addEventListener("click", saveShopDlg);
+      shopDlgEl.addEventListener("click", function (e) { if (e.target === shopDlgEl) closeShopDlg(); });
+      document.getElementById("siLogoFile").addEventListener("change", function () {
+        var f = this.files && this.files[0];
+        if (!f) return;
+        resizeLogo(f, function (data) {
+          if (!data) { toast("That file couldn't be used as a logo. Try a PNG or JPG."); return; }
+          pendingLogo = data;
+          showLogoPreview(data);
+        });
+      });
+      document.getElementById("siLogoRemove").addEventListener("click", function () {
+        pendingLogo = "";
+        document.getElementById("siLogoFile").value = "";
+        showLogoPreview("");
+      });
+    })();
 
     /* ---------- Sales history (per device, last 2 months) ---------- */
 
@@ -2884,16 +3076,15 @@
       var margin = 14;
       var t = R.tot;
 
+      var hy = pdfShopHeader(doc, margin);
       doc.setFont(undefined, "bold");
-      doc.setFontSize(16);
-      doc.text(shopTitle(), margin, 18);
       doc.setFontSize(11);
-      doc.text("Sales Report", margin, 25);
+      doc.text("Sales Report", margin, hy + 7);
       doc.setFont(undefined, "normal");
       doc.setFontSize(9);
       doc.setTextColor(90);
-      doc.text("From " + fmtDay(R.from) + "  to  " + fmtDay(R.to) + "   |   Currency: " + currency, margin, 31);
-      doc.text("Generated " + fmtWhen(), margin, 36);
+      doc.text("From " + fmtDay(R.from) + "  to  " + fmtDay(R.to) + "   |   Currency: " + currency, margin, hy + 13);
+      doc.text("Generated " + fmtWhen(), margin, hy + 18);
       doc.setTextColor(0);
 
       var common = {
@@ -2917,7 +3108,7 @@
       }
 
       doc.autoTable(Object.assign({}, common, {
-        startY: 41,
+        startY: hy + 23,
         head: [["Sales", "Subtotal (" + currency + ")", "Discount", "Tax", "Total (" + currency + ")"]],
         body: [[String(t.n), money(t.s), money(t.d), money(t.x), money(t.g)]],
         columnStyles: { 0: { halign: "left" }, 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } }
@@ -2979,9 +3170,11 @@
         ["From", R.from], ["To", R.to], ["Currency", currency], ["Generated", fmtWhen()], [],
         ["Sales", t.n], ["Subtotal", r6(t.s)], ["Discount", r6(t.d)], ["Tax", r6(t.x)], ["Total", r6(t.g)]
       ];
+      var infoRows = infoLines(readShopInfo()).map(function (l) { return [l]; });
+      summary = [summary[0]].concat(infoRows, summary.slice(1));
       var ws0 = X.utils.aoa_to_sheet(summary);
       ws0["!cols"] = [{ wch: 14 }, { wch: 24 }];
-      [9, 10, 11, 12].forEach(function (r) { var c = ws0[X.utils.encode_cell({ r: r, c: 1 })]; if (c) c.z = fmt; });
+      [9, 10, 11, 12].forEach(function (r) { var c = ws0[X.utils.encode_cell({ r: r + infoRows.length, c: 1 })]; if (c) c.z = fmt; });
       X.utils.book_append_sheet(wb, ws0, "Summary");
 
       var daily = [["Date", "Sales", "Subtotal", "Discount", "Tax", "Total"]];

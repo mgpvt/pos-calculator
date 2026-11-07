@@ -737,3 +737,17 @@ curl -s -o /dev/null -w "%{http_code}\n" -L https://mgpvt.github.io/pos-calculat
 - **Not done yet:** Play Store / App Store packaging (Capacitor plan: Android first; iOS needs a
   Mac or cloud build service and a $99/yr Apple account). Capacitor's WebView would need
   `deliverFile()`/PDF saving re-tested.
+
+## 15. Update (2026-11-07): shop details on bills, font-path fix
+
+- **Shop details (optional):** card-icon button (`#shopInfoBtn`, class `histbtn`) next to the currency
+  opens the `#shopdlg` sheet: address (max 3 lines x 70 chars), phone, tax/registration no., and a
+  logo (file input, resized to max 300px and stored as a PNG/JPEG data URL). `localStorage`:
+  `bconntech.pos.shopinfo` = `{addr, phone, tax}`, `bconntech.pos.logo` = data URL (~20 KB).
+  `pdfShopHeader(doc, margin)` draws logo + shop name + details and returns the y of its last line;
+  the receipt PDF and the report PDF both start from it (with nothing set the layout is identical to
+  before). `infoLines()` feeds the text receipt and the Excel Summary sheet.
+- **Bug fixed:** `vendor/fonts.css` used `url(vendor/fonts/...)`, which resolves relative to the CSS
+  file (`vendor/vendor/fonts/...`) and 404s; it is now `url(fonts/...)`. Keep it that way.
+- Play Store graphics live in `android-app/store/graphics/` (built by `store/src/build_graphics.py`).
+
