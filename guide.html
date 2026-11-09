@@ -59,6 +59,8 @@
   details { background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; padding: 0 14px; }
   summary { cursor: pointer; font-weight: 600; padding: 11px 0; }
   details p { margin-top: 0; }
+  .embedded .open { display: none; }
+  .embedded header { padding: 14px 16px 16px; }
   footer { text-align: center; font-size: 0.8rem; color: var(--dim); padding: 0 16px 36px; }
 </style>
 </head>
@@ -215,6 +217,7 @@
       <li><strong>On a computer</strong> you can type numbers with the keyboard; <kbd>Enter</kbd> works like <kbd>=</kbd>.</li>
       <li><strong>Big amounts:</strong> the display handles up to 8 digits (99,999,999). Anything bigger shows an error message.</li>
       <li><strong>Switching currency</strong> only affects new sales. History and reports show one currency at a time, and tell you if sales in another currency exist.</li>
+      <li><strong>Need this guide again?</strong> Tap the round <kbd>?</kbd> button at the top right of the app at any time. It opens this guide without losing your sale.</li>
       <li><strong>Your data is private.</strong> Nothing is sent to us or anyone else. Shop name, items and history live only on your device.</li>
     </ul>
   </section>
@@ -239,5 +242,6 @@
 </main>
 
 <footer>Shop Calculator &middot; POS. BILLING. SALES. &middot; by bconnTech &middot; <a href="privacy.html">Privacy policy</a></footer>
+<script>if (window.self !== window.top) { document.documentElement.className += " embedded"; }</script>
 </body>
 </html>

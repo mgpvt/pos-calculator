@@ -765,3 +765,11 @@ curl -s -o /dev/null -w "%{http_code}\n" -L https://mgpvt.github.io/pos-calculat
   signing-key folder `D:\Dev\keys\shopcalculator`. It never deletes. `DRYRUN=1` lists without copying;
   `KEYSRC=` overrides the key folder (used for testing so the real key is not copied around).
 
+## 18. Help button
+
+- A round **?** button (`#helpBtn`, inside `.brand`, `margin-left:auto`) opens `#helpdlg`, a bottom-sheet
+  overlay containing an `<iframe id="helpFrame">` that lazily loads `guide.html`. Inside the iframe the
+  guide adds an `embedded` class (hides its own "Open the app" button). Works offline: `guide.html` and the
+  7 `guide-img` images it uses are in `sw.js` FILES, and `android-app/build-web.js` copies them into the app.
+  Esc / X / backdrop close it; the keydown guard checks `helpDlgEl` first.
+

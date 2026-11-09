@@ -1,9 +1,9 @@
 /* Shop Calculator - offline cache. Bump CACHE when any listed file changes. */
-var CACHE = "shop-calculator-v7";
+var CACHE = "shop-calculator-v8";
 var FILES = [
   "./", "index.html", "manifest.webmanifest",
   "icons/icon-192.png", "icons/logo-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "icons/apple-touch-icon.png",
-  "vendor/fonts.css",
+  "vendor/fonts.css", "guide.html", "guide-img/2-sales-mode.jpg", "guide-img/3-enter-item.jpg", "guide-img/4-current-sale.jpg", "guide-img/5-share.jpg", "guide-img/7-history.jpg", "guide-img/8-shop-details.jpg", "guide-img/9-receipt-header.jpg",
   "vendor/jspdf.umd.min.js", "vendor/jspdf.plugin.autotable.min.js", "vendor/xlsx.mini.min.js",
   "vendor/fonts/Inter-400.woff2", "vendor/fonts/Inter-500.woff2", "vendor/fonts/Inter-600.woff2",
   "vendor/fonts/Inter-700.woff2", "vendor/fonts/Inter-800.woff2",

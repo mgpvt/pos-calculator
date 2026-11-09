@@ -1041,6 +1041,20 @@
   .logo-row .hist__btn { height: 36px; font-size: 0.74rem; }
   .shopdlg__hint { margin: 0 0 14px; font-size: 0.78rem; color: var(--ink-dim); }
 
+  /* ---- Help (opens the user guide inside the app) ---- */
+  .brand { flex: 1 1 auto; }
+  .helpbtn {
+    margin-left: auto; flex: none;
+    width: 28px; height: 28px; padding: 0; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 0.95rem; font-weight: 800; line-height: 1;
+    color: var(--on-navy); background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  .helpbtn:hover { background: rgba(255, 255, 255, 0.2); }
+  .helpbtn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .hist__frame { flex: 1; width: 100%; min-height: 60vh; border: 0; background: var(--ground); }
+
   /* ============ Calculator-only mode ============ */
   .app[data-mode="calc"] .panel-sale,
   .app[data-mode="calc"] .salelist,
@@ -1147,6 +1161,7 @@
     <div class="brand">
       <img class="brand__logo" alt="bconnTech" src="icons/logo-192.png">
       <span class="brand__text"><span class="brand__name">Shop Calculator</span><span class="brand__tag">POS. BILLING. SALES.</span></span>
+      <button class="helpbtn" id="helpBtn" type="button" title="Help and user guide" aria-label="Help and user guide">?</button>
     </div>
     <div class="topbar__actions">
       <div class="modeswitch" role="group" aria-label="Mode">
@@ -1423,6 +1438,15 @@
       <button class="hist__btn hist__btn--clear" id="siCancel" type="button">Cancel</button>
       <button class="hist__btn hist__btn--xls" id="siSave" type="button">Save</button>
     </div>
+  </div>
+</div>
+<div class="hist" id="helpdlg" role="dialog" aria-modal="true" aria-labelledby="helpdlgTitle" hidden>
+  <div class="hist__sheet" style="height: 94vh; height: 94dvh;">
+    <div class="hist__head">
+      <h2 id="helpdlgTitle">Help &amp; user guide</h2>
+      <button class="hist__x" id="helpClose" type="button" aria-label="Close help">&times;</button>
+    </div>
+    <iframe class="hist__frame" id="helpFrame" title="Shop Calculator user guide"></iframe>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
@@ -2644,6 +2668,7 @@
     document.addEventListener("keydown", function (e) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       var k = e.key;
+      if (helpDlgEl && !helpDlgEl.hidden) { if (k === "Escape") closeHelp(); return; }
       if (shopDlgEl && !shopDlgEl.hidden) { if (k === "Escape") closeShopDlg(); return; }
       if (histEl && !histEl.hidden) { if (k === "Escape") closeHistory(); return; }
       var ae = document.activeElement;
@@ -3253,6 +3278,30 @@
         renderHistory();
       });
       readHistory(); // prune anything older than 2 months at start-up
+    })();
+
+    /* ---------- Help: the user guide, shown inside the app ---------- */
+
+    var helpDlgEl = document.getElementById("helpdlg");
+    function openHelp() {
+      if (!helpDlgEl) return;
+      var fr = document.getElementById("helpFrame");
+      if (!fr.getAttribute("src")) fr.setAttribute("src", "guide.html");   // loaded on first use
+      helpDlgEl.hidden = false;
+      document.body.style.overflow = "hidden";
+      document.getElementById("helpClose").focus();
+    }
+    function closeHelp() {
+      if (!helpDlgEl) return;
+      helpDlgEl.hidden = true;
+      document.body.style.overflow = "";
+    }
+    (function wireHelp() {
+      var b = document.getElementById("helpBtn");
+      if (b) b.addEventListener("click", function () { clickSound("ctrl"); openHelp(); });
+      if (!helpDlgEl) return;
+      document.getElementById("helpClose").addEventListener("click", closeHelp);
+      helpDlgEl.addEventListener("click", function (e) { if (e.target === helpDlgEl) closeHelp(); });
     })();
 
     /* ---------- Go ---------- */

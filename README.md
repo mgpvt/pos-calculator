@@ -5,7 +5,7 @@ step, works offline, and installs on a phone like an app.
 
 **Live:** https://mgpvt.github.io/pos-calculator/
 
-**New here?** Read the first-time guide: [guide.html](guide.html) (set-up, first sale, history and reports).
+**New here?** Read the first-time guide: [guide.html](guide.html) (set-up, first sale, history and reports), or tap the **?** button at the top of the app.
 
 ## Install on a phone or tablet
 
