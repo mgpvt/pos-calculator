@@ -1,7 +1,7 @@
 """Builds the app icon: a calculator whose display shows the bconnTech logo mark.
 
-Run:  python icons/make_icons.py        (needs Google Chrome + Pillow)
-Writes the web/PWA icons in this folder and the Android launcher icons in
+Run:  python tools/make_icons.py        (needs Google Chrome + Pillow)
+Writes the web/PWA icons into ../icons and the Android launcher icons in
 android-app/android/app/src/main/res/mipmap-*.
 """
 import os, subprocess, tempfile
@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
+ICONS = os.path.join(ROOT, "icons")
 RES = os.path.join(ROOT, "android-app", "android", "app", "src", "main", "res")
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 LOGO = "file:///" + os.path.join(ROOT, "bconntech_logo.png").replace("\\", "/")
@@ -80,11 +81,11 @@ def save(img, path, size):
     img.resize((size, size), Image.LANCZOS).save(path)
 
 any_, bleed = masters["any"], masters["bleed"]
-save(any_, os.path.join(HERE, "icon-512.png"), 512)
-save(any_, os.path.join(HERE, "icon-192.png"), 192)
-save(bleed, os.path.join(HERE, "icon-maskable-512.png"), 512)
-save(bleed, os.path.join(HERE, "apple-touch-icon.png"), 180)
-save(bleed, os.path.join(HERE, "store-icon-1024.png"), 1024)
+save(any_, os.path.join(ICONS, "icon-512.png"), 512)
+save(any_, os.path.join(ICONS, "icon-192.png"), 192)
+save(bleed, os.path.join(ICONS, "icon-maskable-512.png"), 512)
+save(bleed, os.path.join(ICONS, "apple-touch-icon.png"), 180)
+save(bleed, os.path.join(ICONS, "store-icon-1024.png"), 1024)
 
 if os.path.isdir(RES):
     for d, legacy, fg in (("mdpi", 48, 108), ("hdpi", 72, 162), ("xhdpi", 96, 216), ("xxhdpi", 144, 324), ("xxxhdpi", 192, 432)):
