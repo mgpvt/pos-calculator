@@ -48,6 +48,7 @@ After the first load it runs fully offline.
 | File | |
 |---|---|
 | `index.html` / `pos-calculator.html` | the Shop Calculator app (byte-identical) |
+| `tools/` | icon generator (`make_icons.py`) and the double-click backup script |
 | `manifest.webmanifest`, `sw.js`, `icons/` | installable-app setup (home-screen icon, offline cache) |
 | `guide.html`, `guide-img/` | first-time user guide (a web page) |
 | `privacy.html` | privacy policy |

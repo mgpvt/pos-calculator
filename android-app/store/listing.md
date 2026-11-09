@@ -28,6 +28,7 @@ WHAT YOU CAN DO
 • Put your logo, address, phone and tax number on every bill and report (all optional)
 • Save every sale and see daily totals
 • Choose any from–to date range and export a PDF or Excel report
+• Built-in help guide
 • Works fully offline; light and dark themes
 
 PRIVATE BY DESIGN
