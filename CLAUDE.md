@@ -758,3 +758,10 @@ curl -s -o /dev/null -w "%{http_code}\n" -L https://mgpvt.github.io/pos-calculat
   and the Android launcher mipmaps. The plain logo is kept as `icons/logo-192.png` and is used for the
   small header badge and the guide header (a calculator is illegible at 26 px).
 
+## 17. Backup
+
+- `tools/Backup-ShopCalculator.bat` (double-click) asks for a destination, makes a dated folder, and
+  copies the project (excluding `node_modules`, `build`, `.gradle`, `www`, `local.properties`) plus the
+  signing-key folder `D:\Dev\keys\shopcalculator`. It never deletes. `DRYRUN=1` lists without copying;
+  `KEYSRC=` overrides the key folder (used for testing so the real key is not copied around).
+
